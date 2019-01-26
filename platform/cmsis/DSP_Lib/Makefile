@@ -1,0 +1,29 @@
+cur_dir := $(dir $(lastword $(MAKEFILE_LIST)))
+
+#obj-y := $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)*.c $(cur_dir)*.S))
+
+ifeq ($(DSP_LIB_ALL_ENABLE),1)
+
+obj-y := $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)*/Makefile))
+obj-y := $(obj-y:/Makefile=/)
+
+else
+
+obj-y :=
+obj-y += \
+	CommonTables/ \
+	FilteringFunctions/arm_biquad_cascade_df1_init_f32.c \
+	FilteringFunctions/arm_biquad_cascade_df1_f32.c \
+	TransformFunctions/arm_bitreversal2.S \
+	TransformFunctions/arm_cfft_f32.c \
+	TransformFunctions/arm_cfft_radix8_f32.c \
+	TransformFunctions/arm_rfft_fast_init_f32.c \
+	TransformFunctions/arm_rfft_fast_f32.c \
+	TransformFunctions/arm_rfft_init_q15.c \
+	TransformFunctions/arm_rfft_q15.c \
+
+obj-y := $(obj-y:.c=.o)
+obj-y := $(obj-y:.S=.o)
+
+endif
+

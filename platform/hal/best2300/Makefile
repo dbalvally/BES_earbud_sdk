@@ -1,0 +1,84 @@
+cur_dir := $(dir $(lastword $(MAKEFILE_LIST)))
+
+obj-y := $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)*.c))
+obj-y := $(obj-y:.c=.o)
+
+ifeq ($(MCU_HIGH_PERFORMANCE_MODE),1)
+ifneq ($(FLASH_LOW_SPEED),1)
+$(error FLASH_LOW_SPEED should be used with MCU_HIGH_PERFORMANCE_MODE on best2300)
+endif
+endif
+
+ifeq ($(USB_CLK_SRC_24M_X2),1)
+CMU_CFG_FLAGS += -DUSB_CLK_SRC_24M_X2
+else
+ifeq ($(USB_CLK_SRC_48M),1)
+CMU_CFG_FLAGS += -DUSB_CLK_SRC_48M
+else
+ifeq ($(USB_CLK_SRC_26M_X4),1)
+CMU_CFG_FLAGS += -DUSB_CLK_SRC_26M_X4
+else
+ifeq ($(USB_CLK_SRC_26M_X2),1)
+CMU_CFG_FLAGS += -DUSB_CLK_SRC_26M_X2
+endif
+endif
+endif
+endif
+
+ifeq ($(DAC_CLASSG_ENABLE),1)
+CODEC_CFG_FLAGS += -DDAC_CLASSG_ENABLE
+endif
+
+ifeq ($(DAC_DRE_ENABLE),1)
+CODEC_CFG_FLAGS += -DDAC_DRE_ENABLE
+endif
+
+ifeq ($(JTAG_BT),1)
+PSC_CFG_FLAGS += -DJTAG_BT
+JTAG_TDI_TDO_PIN ?= 1
+JTAG_RESET_PIN ?= 1
+
+endif
+
+ifeq ($(JTAG_TDI_TDO_PIN),1)
+IOMUX_CFG_FLAGS += -DJTAG_TDI_TDO_PIN
+endif
+
+ifeq ($(JTAG_RESET_PIN),1)
+IOMUX_CFG_FLAGS += -DJTAG_RESET_PIN
+endif
+
+ifneq ($(SPI_IOMUX_CS1_INDEX),)
+IOMUX_CFG_FLAGS += -DSPI_IOMUX_CS1_INDEX=$(SPI_IOMUX_CS1_INDEX)
+endif
+
+ifneq ($(SPI_IOMUX_DI1_INDEX),)
+IOMUX_CFG_FLAGS += -DSPI_IOMUX_DI1_INDEX=$(SPI_IOMUX_DI1_INDEX)
+endif
+
+ifneq ($(SPILCD_IOMUX_CS1_INDEX),)
+IOMUX_CFG_FLAGS += -DSPILCD_IOMUX_CS1_INDEX=$(SPILCD_IOMUX_CS1_INDEX)
+endif
+
+ifneq ($(SPILCD_IOMUX_DI1_INDEX),)
+IOMUX_CFG_FLAGS += -DSPILCD_IOMUX_DI1_INDEX=$(SPILCD_IOMUX_DI1_INDEX)
+endif
+
+ifneq ($(I2S_MCLK_IOMUX_INDEX),)
+IOMUX_CFG_FLAGS += -DI2S_MCLK_IOMUX_INDEX=$(I2S_MCLK_IOMUX_INDEX)
+endif
+
+ifeq ($(USE_CYBERON),1)
+ANAIF_CFG_FLAGS	+= -DUSE_CYBERON
+endif
+
+CFLAGS_hal_analogif_best2300.o += $(ANAIF_CFG_FLAGS)
+
+CFLAGS_hal_cmu_best2300.o += $(CMU_CFG_FLAGS)
+
+CFLAGS_hal_psc_best2300.o += $(PSC_CFG_FLAGS)
+
+CFLAGS_hal_codec_best2300.o += $(CODEC_CFG_FLAGS)
+
+CFLAGS_hal_iomux_best2300.o += $(IOMUX_CFG_FLAGS)
+

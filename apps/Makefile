@@ -1,0 +1,36 @@
+obj-y := audioplayers/ common/ main/ key/ mic/ pwl/ battery/ factory/ ota/
+
+ifeq ($(APP_TEST_AUDIO),1)
+obj-y += apptester/
+endif
+
+ifeq ($(BTUSB_AUDIO_MODE),1)
+obj-y += usbaudio/
+endif
+
+ifeq ($(APP_TEST_SDMMC),1)
+obj-y += sdmmc/
+endif
+
+ifeq ($(ANC_APP),1)
+obj-y += anc/
+endif
+
+ifeq ($(VOICE_DETECTOR_EN),1)
+obj-y += voice_detector/
+endif
+
+subdir-ccflags-y += -Iapps/apptester \
+					-Iapps/audioplayers \
+					-Iapps/common \
+					-Iapps/sdmmc \
+					-Iapps/main \
+					-Iapps/key \
+					-Iapps/pwl \
+					-Iapps/battery \
+					-Iutils/list \
+					-Iutils/heap \
+					-Iservices/ble_stack/common/api \
+					-Iservices/voicepath \
+					-Iservices/bt_if/inc
+

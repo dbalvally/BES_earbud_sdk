@@ -1,0 +1,217 @@
+/***************************************************************************
+ *
+ * Copyright 2015-2019 BES.
+ * All rights reserved. All unpublished rights reserved.
+ *
+ * No part of this work may be used or reproduced in any form or by any
+ * means, or stored in a database or retrieval system, without prior written
+ * permission of BES.
+ *
+ * Use of this work is governed by a license granted by BES.
+ * This work contains confidential and proprietary information of
+ * BES. which is protected by copyright, trade secret,
+ * trademark and other intellectual property rights.
+ *
+ ****************************************************************************/
+#ifndef _L2CAP_API_H
+#define _L2CAP_API_H
+
+#define BTIF_NULL_IDENTIFIER_CID      0x0000
+#define BTIF_SIGNALING_CHNL_CID       0x0001
+#define BTIF_CONNLESS_CHNL_CID        0x0002
+#define BTIF_BASE_DYNAMIC_CID         0x0040
+#define BTIF_LAST_DYNAMIC_CID         (BTIF_BASE_DYNAMIC_CID + L2CAP_NUM_CHANNELS - 1)
+#define BTIF_CID_TO_INDEX(_CID)       ((_CID) - BTIF_BASE_DYNAMIC_CID)
+#define BTIF_BASE_GROUP_CID           ((BTIF_LAST_DYNAMIC_CID+16) & 0xFFF0)
+#define BTIF_LAST_GROUP_CID           (BTIF_BASE_GROUP_CID + L2CAP_NUM_GROUPS - 1)
+#define BTIF_GROUP_CID_TO_INDEX(_CID) ((_CID) - BTIF_BASE_GROUP_CID)
+
+#define BTIF_LLC_COMMAND_REJ     0x01
+#define BTIF_LLC_CONN_REQ        0x02
+#define BTIF_LLC_CONN_RSP        0x03
+#define BTIF_LLC_CONFIG_REQ      0x04
+#define BTIF_LLC_CONFIG_RSP      0x05
+#define BTIF_LLC_DISC_REQ        0x06
+#define BTIF_LLC_DISC_RSP        0x07
+#define BTIF_LLC_ECHO_REQ        0x08
+#define BTIF_LLC_ECHO_RSP        0x09
+#define BTIF_LLC_INFO_REQ        0x0A
+#define BTIF_LLC_INFO_RSP        0x0B
+#define  BTIF_LLC_TWS_DATA_XFER	0xFE
+
+typedef U16 btif_l2cap_psm_value_t;
+
+#define BTIF_BT_CLIENT_ONLY_PSM      0x0000
+
+/* Value for a Service Discovery Protocol server */
+#define BTIF_BT_PSM_SDP              0x0001
+
+/* Value for an RFCOMM server */
+#define BTIF_BT_PSM_RFCOMM           0x0003
+
+/* Value for a TCS Binary server */
+#define BTIF_BT_PSM_TCS              0x0005
+
+/* Value for a TCS Binary group */
+#define BTIF_BT_PSM_TCS_CORDLESS     0x0007
+
+/* Value for the BNEP service */
+#define BTIF_BT_PSM_BNEP             0x000F
+
+/* Value for the HID Control Channel */
+#define BTIF_BT_PSM_HID_CTRL         0x0011
+
+/* Value for the HID Interrupt Channel */
+#define BTIF_BT_PSM_HID_INTR         0x0013
+
+/* Value for the UPnP/ESDP service */
+#define BTIF_BT_PSM_UPNP             0x0015
+
+/* Value for the A/V Control Transport Protocol signal channel */
+#define BTIF_BT_PSM_AVCTP            0x0017
+
+/* Value for the A/V Distribution Transport protocol */
+#define BTIF_BT_PSM_AVDTP            0x0019
+
+/* Value for the A/V Control Transport Protocol browsing channel*/
+#define BTIF_BT_PSM_AVCTP_BROWSING   0x001B
+
+/* Value for Unrestricted Digital Information Control Plane protocol */
+#define BTIF_BT_PSM_UDI_C            0x001D
+
+#define BTIF_BT_DYNAMIC_PSM          0x1101
+
+typedef void btif_l2cap_channel_t;
+
+
+typedef struct
+{
+    list_entry_t  node;   /* Used internally by the stack */
+
+    /* Group: The following parameters must be set before calling
+     * SEC_AccessRequest.
+     */
+    uint32_t    id;      /* Protocol ID of caller */
+
+    /* Pointer to remote device for which the access is being requested */
+    void *remDev;
+
+    /* The multiplexing channel number. For example for L2CAP it is the PSM
+     * and for RFCOMM it is the Server ID (incoming only) or a pointer to an
+     * RfChannel structure (outgoing only).
+     */
+    U32_PTR         channel;
+
+    /* Incoming must be set to TRUE if access is desired for a connection
+     * request from a remote (incoming). It must be set to FALSE if the
+     * request is for a connection to remote device (outgoing).
+     */
+    BOOL            incoming;
+
+    /* === Internal use only === */
+
+    uint8_t         result;
+    void   *record;
+    uint8_t     level;
+    evm_timer_t            timer;
+    evm_timer_t            authenticateOpDelaytimer;
+    BOOL                changeLinkKey;
+    uint8_t  authRequirements;
+} bt_security_token_t;
+
+typedef struct
+{
+    U8   linkMode;
+    U8   prefLinkMode;
+    U8              txWindow;
+    U8              rxWindow;
+    U8              maxTransmit;
+    U16             retransTimeout;
+    U16             monitorTimeout;
+    U16  fcsOption;
+    U16             txMps;
+    U16             rxMps;
+} l2cap_flow_parms_t;
+
+
+struct  {
+    U16                 flags;
+    U8                  state;          /* L2CAP Channel Connection State */
+    U8                  localIdent;     /* Identifier sent in signalling request */
+
+    void     *link;           /* remote device info and data queues */
+    evm_timer_t            timer;          /* RTX/ERTX */
+
+    U16                 rxMtu;          /* Max Rx SDU size (MTU) */
+    U16                 txMtu;          /* Max Tx SDU size */
+    U16                 inUse;          /* Number of signal + data packets outstanding on channel */
+
+    U16                 remotePsm;      /* Remote PSM value */
+
+    /* Channel oriented stuff */
+    const void     *psmInfo;        /* PSM hosting this channel */
+    U16      localCid;       /* Local Channel Id (>= 0x0040) */
+    U16      remoteCid;      /* Remote devices channel id */
+    U8                  remoteIdent;    /* Identifier recv'd in signalling req */
+    U8                  workspace[BTIF_L2C_WORKSPACE_LEN]; /* Holder for rejected config options. */
+    U8                  wsLen;          /* Length of options in workspace */
+    U16                 result;         /* Configure/Connect response "result" */
+#if BTIF_BT_SECURITY == BTIF_ENABLED
+    bt_security_token_t     authorization;  /* Passed to ME for access requests. */
+#endif
+    U16                 txFlushTimeout;
+    U16                 rxFlushTimeout;
+#if BTIF_L2CAP_PRIORITY == BTIF_ENABLED
+    U8          priority;
+#endif
+
+#if BTIF_L2CAP_NUM_ENHANCED_CHANNELS > 0
+    U8                  linkMode;       /* Uses LINK_MODE_XXX defines. */
+    U8       triedLinkModes; /* Link Modes tried at configuration negotiation. */
+    l2cap_flow_parms_t      flowParms;      /* Flow control parms for channel */
+    U16                 flags2;
+    void     *eCh;
+#endif /* L2CAP_NUM_ENHANCED_CHANNELS > 0 */
+}l2cap_channel_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    btif_l2cap_channel_t *btif_l2cap_alloc_channel_instance(uint16_t index);
+
+    btif_l2cap_channel_t *btif_l2cap_get_l2cap_channel_instance(uint16_t index);
+
+    uint16_t btif_l2cap_cid_to_index(uint16_t index);
+
+    uint32_t btif_l2cap_get_channel_size(void);
+
+    void btif_l2cap_set_channel_local_cid(btif_l2cap_channel_t * channel, uint16_t cid);
+
+    void btif_l2cap_set_channel_remote_cid(btif_l2cap_channel_t * channel, uint16_t cid);
+
+    uint16_t btif_l2cap_get_channel_local_cid(btif_l2cap_channel_t * channel);
+
+    uint16_t btif_l2cap_get_channel_remote_cid(btif_l2cap_channel_t * channel);
+
+    bool btif_l2cap_is_tws_reserved_channel_in_use(void);
+
+    void btif_L2CAP_BuildConnectionToTwsReservedChannel(btif_remote_device_t * Device);
+
+    void btif_l2cap_close_tws_reserved_channel(void);
+
+#if IS_USE_INTERNAL_ACL_DATA_PATH
+
+#else
+    bt_status_t btif_l2cap_send_data_to_peer_tws(U16 connHandle, U16 dataLen, U8 * data);
+
+#endif
+
+uint32_t btif_set_l2cap_channels_ctx(uint8_t *ctxs_buffer, uint8_t dev_tbl_idx);
+
+uint32_t btif_save_l2cap_channel_ctxs( uint8_t *ctxs_buffer  ,uint8_t * channel_idex);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
