@@ -31,6 +31,7 @@
 #include "hal_bootmode.h"
 #include "pmu.h"
 #include "log_section.h"
+//#include "../../services/ble_app/app_tws/ble_tws.h"
 
 extern const char sys_build_info[];
 
@@ -2023,6 +2024,8 @@ static int hal_trace_rx_parse(int8_t *buf, HAL_TRACE_RX_CFG_T *cfg)
     int pos = 0;
     int len = 0;
 
+    TRACE("Buffer: %s \n",buf);
+    TRACE("cfg: %s \n",cfg->buf);
     for(; pos<HAL_TRACE_RX_HEAD_SIZE; pos++)
     {
         if(buf[pos] == HAL_TRACE_RX_HEAD)
@@ -2040,6 +2043,7 @@ static int hal_trace_rx_parse(int8_t *buf, HAL_TRACE_RX_CFG_T *cfg)
     pos++;
 
     cfg->name = (char *)(buf+pos);
+    TRACE("name: %s \n",cfg->name);
     for(; pos<HAL_TRACE_RX_NAME_SIZE+HAL_TRACE_RX_HEAD_SIZE; pos++)
     {
         if(buf[pos] == HAL_TRACE_RX_SEPARATOR)
@@ -2049,6 +2053,7 @@ static int hal_trace_rx_parse(int8_t *buf, HAL_TRACE_RX_CFG_T *cfg)
         }
     }
 
+    TRACE("pos: %d \n",pos);
     // TRACE("Step1: %s", cfg->name);
     // TRACE("%d", strlen(cfg->name));
 
@@ -2061,6 +2066,7 @@ static int hal_trace_rx_parse(int8_t *buf, HAL_TRACE_RX_CFG_T *cfg)
 
     len = 0;
     cfg->buf = (uint8_t*)(buf+pos);
+    TRACE("cfg: %s \n",cfg->buf);
     for(; pos<HAL_TRACE_RX_BUF_SIZE; pos++)
     {
         if(buf[pos] == HAL_TRACE_RX_END)
@@ -2085,17 +2091,22 @@ int hal_trace_rx_process(uint8_t *buf)
     int id = 0;
     int res = 0;
 
-    res = hal_trace_rx_parse((int8_t*)buf, &cfg);
+    // parsing in case command has any arguments: needs to be modified per jaybird requirements
 
-    if(res)
-    {
-        TRACE("ERROR: hal_trace_rx_parse %d", res);
-        return 1;
-    }
-    else
-    {
-        // TRACE("%s rx OK", cfg.name);
-    }
+//    res = hal_trace_rx_parse((int8_t*)buf, &cfg);
+
+//    if(res)
+//    {
+//        TRACE("ERROR: hal_trace_rx_parse %d", res);
+//        return 1;
+//    }
+//    else
+//    {
+//         TRACE("%s rx OK", cfg.name);
+//    }
+
+    cfg.name = buf;
+    cfg.len = strlen(buf);
 
     id = hal_trace_rx_is_in_list(cfg.name);
 
@@ -2180,14 +2191,25 @@ uint32_t app_test_callback(unsigned char *buf, uint32_t len)
 
     return 0;
 }
+extern void app_bt_start_pairing(uint32_t pairingMode, uint8_t* pMasterAddr, uint8_t* SlaveAddr);
+
+uint32_t app_start_pairable_mode_callback(unsigned char *buf, uint32_t len)
+{
+    TRACE("[%s] len = %d", __func__, len);
+
+	app_bt_start_pairing(0,NULL,NULL);
+
+
+    return 0;
+}
 
 int hal_trace_rx_open()
 {
     hal_uart_irq_set_dma_handler(trace_uart, hal_trace_rx_irq_handler, NULL, NULL);
     hal_trace_rx_start();
 
-    // hal_trace_rx_register("test", (HAL_TRACE_RX_CALLBACK_T)app_test_callback);
-
+     hal_trace_rx_register("test1", (HAL_TRACE_RX_CALLBACK_T)app_test_callback);
+     hal_trace_rx_register("start_pairing", (HAL_TRACE_RX_CALLBACK_T)app_start_pairable_mode_callback);
     return 0;
 }
 

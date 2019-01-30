@@ -24,7 +24,7 @@ extern "C" {
 
 // #define AUDIO_DEBUG
 // #define AUDIO_DEBUG_V0_1_0
-// #define HAL_TRACE_RX_ENABLE
+ #define HAL_TRACE_RX_ENABLE
 
 enum HAL_TRACE_MODUAL {
     HAL_TRACE_LEVEL_0         = 1<<0,

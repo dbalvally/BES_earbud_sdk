@@ -332,6 +332,7 @@ bool app_tws_is_connecting_ble(void);
 
 void app_start_connectable_ble_adv(uint16_t adv_interval_in_ms);
 
+
 #ifdef __cplusplus
 	}
 #endif

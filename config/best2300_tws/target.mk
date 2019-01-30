@@ -147,7 +147,7 @@ SUPPORT_SIRI ?= 1
 
 export POWER_MODE	?= DIG_DCDC
 
-export BT_RF_PREFER ?= 2M
+export BT_RF_PREFER ?= 3M
 
 HALFDUPLEXUART ?= 0
 
