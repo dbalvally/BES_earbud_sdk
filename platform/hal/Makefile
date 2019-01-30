@@ -261,6 +261,13 @@ ifeq ($(BTDUMP_ENABLE),1)
 CMU_CFG_FLAGS += -DBTDUMP_ENABLE
 endif
 
+# ANAIF settings
+export ANAIF_CFG_FLAGS :=
+
+ifeq ($(ISPI_ARBITRATOR_ENABLE),1)
+ANAIF_CFG_FLAGS += -DISPI_ARBITRATOR_ENABLE
+endif
+
 # PSC settings
 export PSC_CFG_FLAGS :=
 

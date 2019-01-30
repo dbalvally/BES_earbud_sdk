@@ -999,7 +999,7 @@ void pmu_sleep_en(unsigned char sleep_en)
     }
 }
 
-int pmu_reset(void)
+void pmu_reset(void)
 {
     return;
 }

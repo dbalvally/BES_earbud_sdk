@@ -203,6 +203,12 @@ static int hal_intersys_peer_irq_set(enum HAL_INTERSYS_ID_T id, enum HAL_INTERSY
     return 0;
 }
 
+static inline void btcmu_reg_update_wait(void)
+{
+    // Make sure BTCMU (26M clock domain) write opertions finish before return
+    btcmu->ISIRQ_CLR;
+}
+
 static int hal_intersys_local_irq_clear(enum HAL_INTERSYS_ID_T id, enum HAL_INTERSYS_IRQ_TYPE_T type)
 {
     uint32_t value;
@@ -222,6 +228,7 @@ static int hal_intersys_local_irq_clear(enum HAL_INTERSYS_ID_T id, enum HAL_INTE
     }
 
     btcmu->ISIRQ_CLR = value;
+    btcmu_reg_update_wait();
     return 0;
 }
 
@@ -244,6 +251,7 @@ static int hal_intersys_local_irq_set(enum HAL_INTERSYS_ID_T id, enum HAL_INTERS
     }
 
     btcmu->ISIRQ_SET = value;
+    btcmu_reg_update_wait();
     return 0;
 }
 

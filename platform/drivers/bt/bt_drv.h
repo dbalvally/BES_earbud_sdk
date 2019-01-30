@@ -103,14 +103,11 @@ extern "C" {
 //#define BT_50_FUNCTION
 
 //#define __HW_SW_AGC__
-#ifndef  LBRT
-//LBRT can not coexist with HW AGC and BT_NEW_RF
 #define __HW_AGC__
 //#define __BT_NEW_RF__
 #define __FANG_HW_AGC_CFG__
 #define __FANG_LNA_CFG__
 //#define __FANG_HW_AGC_CFG_ADC__
-#endif
  
 //#define APB_PCM                             /
 //#define SW_INSERT_MSBC_TX_OFFSET   
@@ -240,7 +237,8 @@ extern "C" {
 
 ///set hostwake
 #define HCI_DBG_SET_HOSTWAKE_CMD_OPCODE               0xFC5E
-
+//reserved for VCO test
+#define HCI_DBG_BT_VCO_TEST_CMD_OPCODE                0xFCAA
 
 #if defined(CHIP_BEST2300) || defined(CHIP_BEST1400) || defined(__FPGA_BT_2300__) || defined(__FPGA_BT_1400__) 
 

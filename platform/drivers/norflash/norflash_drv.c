@@ -44,6 +44,12 @@
 
 #define NORFLASH_PUYA_ID_PREFIX                 0x85
 
+#define NORFLASH_XTS_ID_PREFIX                  0x0B
+
+#define XTS_UNIQUE_ID_LEN                       16
+#define XTS_UNIQUE_ID_CMD                       0x5A
+#define XTS_UNIQUE_ID_PARAM                     0x00019400
+
 // GigaDevice
 extern const struct NORFLASH_CFG_T gd25lq64c_cfg;
 extern const struct NORFLASH_CFG_T gd25lq32c_cfg;
@@ -179,6 +185,12 @@ static const uint8_t samdly_list_div1[] = { 0, 1, 2, };
 static const uint8_t samdly_list_divn[] = { 2, 3, 4, 5, };
 #else
 static const uint8_t samdly_list_divn[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, };
+#endif
+#endif
+
+#if !(defined(PROGRAMMER) || defined(OTA_PROGRAMMER))
+#if defined(FLASH_STATUS_REGISTER_INIT)
+static const uint32_t status_init_val[] = { FLASH_STATUS_REGISTER_INIT };
 #endif
 #endif
 
@@ -368,17 +380,9 @@ static int norflash_set_continuous_read(uint8_t on)
 static int norflash_set_quad(uint8_t on)
 {
     if (on) {
-        norflaship_cmd_addr(GD25Q32C_CMD_WRITE_ENABLE, 0);
-        norflash_status_WIP_1_wait(0);
-        norflash_status_WEL_0_wait();
         flash_list[flash_idx]->write_status(DRV_NORFLASH_W_STATUS_QE, 1);
-        norflash_status_WIP_1_wait(0);
     } else {
-        norflaship_cmd_addr(GD25Q32C_CMD_WRITE_ENABLE, 0);
-        norflash_status_WIP_1_wait(0);
-        norflash_status_WEL_0_wait();
         flash_list[flash_idx]->write_status(DRV_NORFLASH_W_STATUS_QE, 0);
-        norflash_status_WIP_1_wait(0);
     }
     return 0;
 }
@@ -494,7 +498,36 @@ int norflash_get_size(uint32_t *total_size, uint32_t *block_size, uint32_t *sect
     return 0;
 }
 
-int norflash_set_mode(uint32_t op)
+#if defined(PROGRAMMER) || defined(OTA_PROGRAMMER) || defined(FLASH_STATUS_REGISTER_INIT)
+static uint32_t norflash_get_status_init_val(void)
+{
+    uint32_t val = 0;
+
+#if defined(PROGRAMMER) || defined(OTA_PROGRAMMER)
+
+    // Always reset status register to 0 in programmer
+
+#elif defined(FLASH_STATUS_REGISTER_INIT)
+    // Set BP and CMP bits
+    // E.g., for 32M bit flash, BP=0b00010 CMP=1 can protect 0x000000 - 0x3DFFFF
+
+    uint32_t idw;
+    const uint8_t *id;
+
+    id = flash_list[flash_idx]->id;
+    idw = id[0] | (id[1] << 8) | (id[2] << 16);
+    for (int i = 0; (i + 1) < ARRAY_SIZE(status_init_val); i += 2) {
+        if (idw == status_init_val[i]) {
+            val = status_init_val[i + 1];
+        }
+    }
+#endif
+
+    return val;
+}
+#endif
+
+int norflash_set_mode(uint32_t op, int init)
 {
     uint32_t read_mode = 0;
     uint32_t ext_mode = 0;
@@ -514,6 +547,12 @@ int norflash_set_mode(uint32_t op)
     norflaship_quad_mode(0);
 
     norflaship_dual_mode(0);
+
+#if defined(PROGRAMMER) || defined(OTA_PROGRAMMER) || defined(FLASH_STATUS_REGISTER_INIT)
+    if (init) {
+        flash_list[flash_idx]->write_status(DRV_NORFLASH_W_STATUS_INIT, norflash_get_status_init_val());
+    }
+#endif
 
     if (mode & HAL_NORFLASH_OP_MODE_HIGH_PERFORMANCE) {
         // High performance mode on
@@ -576,8 +615,8 @@ int norflash_set_mode(uint32_t op)
     if (mode & HAL_NORFLASH_OP_MODE_READ_WRAP) {
         ext_mode |= HAL_NORFLASH_OP_MODE_READ_WRAP;
         norflash_set_burst_wrap(32);
-        hal_cache_wrap_enable(HAL_CACHE_ID_I_CACHE, HAL_CACHE_YES);
-        hal_cache_wrap_enable(HAL_CACHE_ID_D_CACHE, HAL_CACHE_YES);
+        hal_cache_wrap_enable(HAL_CACHE_ID_I_CACHE);
+        hal_cache_wrap_enable(HAL_CACHE_ID_D_CACHE);
     }
 #endif
 
@@ -686,8 +725,13 @@ int norflash_read_reg_ex(uint8_t cmd, uint8_t *param, uint32_t param_len, uint8_
 
 int norflash_write_reg(uint8_t cmd, const uint8_t *val, uint32_t len)
 {
+    norflaship_cmd_addr(GD25Q32C_CMD_WRITE_ENABLE, 0);
+    norflash_status_WIP_1_wait(0);
+    norflash_status_WEL_0_wait();
+
     norflaship_clear_txfifo();
     norflaship_write_txfifo(val, len);
+
 #ifdef TRY_EMBEDDED_CMD
     if (cmd == GD25Q32C_CMD_WRITE_STATUS_S0_S7) {
         norflaship_cmd_addr(GD25Q32C_CMD_WRITE_STATUS_S0_S7, 0);
@@ -697,6 +741,7 @@ int norflash_write_reg(uint8_t cmd, const uint8_t *val, uint32_t len)
 #else
     norflaship_ext_tx_cmd(cmd, len);
 #endif
+
     norflash_status_WIP_1_wait(0);
 
     return 0;
@@ -719,14 +764,24 @@ int norflash_get_id(uint8_t *value, uint32_t len)
 int norflash_get_unique_id(uint8_t *value, uint32_t len)
 {
     uint32_t param;
+    uint8_t cmd;
 
     norflash_pre_operation();
 
-    if (len > NORFLASH_UNIQUE_ID_LEN) {
-        len = NORFLASH_UNIQUE_ID_LEN;
+    if (flash_list[flash_idx]->id[0] == NORFLASH_XTS_ID_PREFIX) {
+        if (len > XTS_UNIQUE_ID_LEN) {
+            len = XTS_UNIQUE_ID_LEN;
+        }
+        param = XTS_UNIQUE_ID_PARAM;
+        cmd = XTS_UNIQUE_ID_CMD;
+    } else {
+        if (len > NORFLASH_UNIQUE_ID_LEN) {
+            len = NORFLASH_UNIQUE_ID_LEN;
+        }
+        param = 0;
+        cmd = GD25Q32C_CMD_UNIQUE_ID;
     }
-    param = 0;
-    norflash_read_reg_ex(GD25Q32C_CMD_UNIQUE_ID, (uint8_t *)&param, sizeof(param), value, len);
+    norflash_read_reg_ex(cmd, (uint8_t *)&param, sizeof(param), value, len);
 
     norflash_post_operation();
 
@@ -1180,11 +1235,7 @@ void norflash_wakeup(void)
 #ifdef FLASH_SECURITY_REGISTER
 int norflash_security_register_lock(uint32_t id)
 {
-    norflaship_cmd_addr(GD25Q32C_CMD_WRITE_ENABLE, 0);
-    norflash_status_WIP_1_wait(0);
-    norflash_status_WEL_0_wait();
     flash_list[flash_idx]->write_status(DRV_NORFLASH_W_STATUS_LB, id);
-    norflash_status_WIP_1_wait(0);
 
     return 0;
 }
@@ -1302,7 +1353,7 @@ uint32_t norflash_security_register_enable_read(void)
 
     mode = norflash_op_mode;
 
-    norflash_set_mode(0);
+    norflash_set_mode(0, false);
 
     norflaship_busy_wait();
 #if (CHIP_FLASH_CTRL_VER <= 1)
@@ -1327,7 +1378,7 @@ void norflash_security_register_disable_read(uint32_t mode)
     norflaship_rdcmd(GD25Q32C_CMD_STANDARD_READ);
     norflaship_busy_wait();
 
-    norflash_set_mode(mode);
+    norflash_set_mode(mode, false);
 }
 
 #endif

@@ -618,6 +618,13 @@ const uint8_t hci_cmd_nonsig_rx_2dh3_pn9[] = {
 const uint8_t hci_cmd_nonsig_rx_3dh3_pn9[] = {
 0x01, 0x87, 0xfc, 0x14, 0x01, 0xe8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x06, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x01, 0x01, 0x0b, 0x00, 0x28, 0x02
 };
+//vco test
+const uint8_t hci_cmd_start_bt_vco_test[] = {
+0x01, 0xaa, 0xfc, 0x02, 0x00,0x02
+};
+const uint8_t hci_cmd_stop_bt_vco_test[] = {
+0x01, 0xaa, 0xfc, 0x02, 0x00,0x04
+};
 
 void btdrv_testmode_start(void)
 {
@@ -751,6 +758,43 @@ void btdrv_enable_nonsig_rx(uint8_t index)
 static bool btdrv_vco_test_running = false;
 static unsigned short vco_test_reg_val_b6 = 0;
 static unsigned short vco_test_reg_val_1f3 = 0;
+#ifdef VCO_TEST_TOOL
+static unsigned short vco_test_hack_flag = 0;
+static unsigned short vco_test_channel = 0xff;
+
+extern "C" unsigned short btdrv_get_vco_test_process_flag(void)
+{
+    return vco_test_hack_flag;
+}
+
+extern "C" bool btdrv_vco_test_bridge_intsys_callback(const unsigned char *data)
+{
+    bool status = false;
+    if(data[0]==0x01 &&data[1]==0xaa&&data[2]==0xfc &&data[3]==0x02)
+    {
+        status = true;
+        vco_test_hack_flag = data[5];
+        vco_test_channel = data[4];
+    }
+    
+    return status;
+}
+
+extern "C" void btdrv_vco_test_process(uint8_t op)
+{
+    if(op == 0x02)//vco test start
+    {
+        if(vco_test_channel != 0xff)
+            btdrv_vco_test_start(vco_test_channel);
+    }
+    else if(op ==0x04)//vco test stop
+    {
+        btdrv_vco_test_stop();
+    }
+    vco_test_channel =0xff;
+    vco_test_hack_flag = 0;
+}
+#endif
 
 void btdrv_vco_test_start(uint8_t chnl)
 {

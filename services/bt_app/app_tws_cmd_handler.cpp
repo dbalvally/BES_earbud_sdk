@@ -382,4 +382,23 @@ BOOL is_cmd_in_not_exit_sniff_list(uint16_t cmd_code)
     return ret_status;
 }
 
+#ifdef BES_OTA_TWS
+bool ota_tws_transfer_data(uint8_t *pDataBuf, uint16_t dataLength)
+{
+    if (IS_CONNECTED_WITH_TWS_PROFILE() && app_tws_is_roleswitch_in_idle_state())
+    {
+#if IS_ENABLE_BT_DRIVER_REG_DEBUG_READING
+        bt_drv_reg_op_connection_checker();
+#endif
+        APP_TWS_CMD_DATA_FORMAT_T cmdData = {APP_TWS_CMD_TWS_OTA_DATA};
+        memcpy(cmdData.content, pDataBuf, dataLength);
+        send_data_to_peer_tws_via_acl_data_path((uint8_t *)&cmdData, dataLength + APP_TWS_CMD_CODE_SIZE);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+#endif
 

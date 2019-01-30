@@ -68,27 +68,15 @@
 //         HAL_CMD_PARA_INVALID
 // } EL_PARA_E;
 
-typedef enum {
-    HAL_CMD_RX_START,
-    HAL_CMD_RX_STOP,
-    HAL_CMD_RX_DONE
-} hal_cmd_rx_status_t;
-
 typedef int (*hal_cmd_callback_t)(uint8_t *buf, uint32_t  len);
-typedef void (*CMD_CALLBACK_HANDLER_T)(hal_cmd_rx_status_t status);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 int hal_cmd_init (void);
 int hal_cmd_open (void);
 int hal_cmd_close (void);
-int hal_cmd_run (hal_cmd_rx_status_t status);
-void hal_cmd_set_callback(CMD_CALLBACK_HANDLER_T handler);
+int hal_cmd_run (void);
+
 int hal_cmd_register(char *name, hal_cmd_callback_t callback);
-#ifdef __cplusplus
-}
-#endif
+
 // hal_cmd_t *hal_cmd_get_ptr(void);
 
 #endif

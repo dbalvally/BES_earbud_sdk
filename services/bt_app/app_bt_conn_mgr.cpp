@@ -44,6 +44,7 @@
 #ifdef __TWS__
 #include "app_tws.h"
 #include "app_tws_if.h"
+#include "tws_api.h"
 #endif
 
 #include "app_utils.h"
@@ -52,6 +53,9 @@
 #include "ble_tws.h"
 #include "bt_drv_interface.h"
 #include "log_section.h"
+#ifdef BES_OTA_TWS
+#include "ota_control.h"
+#endif
 
 CONN_OP_STATE_MACHINE_TYPE_E    conn_op_state_machine_type = CONN_OP_STATE_MACHINE_NORMAL;
 CONN_OP_STATE_E                 conn_op_state = CONN_OP_STATE_IDLE;
@@ -225,6 +229,13 @@ static void tws_sharing_pairing_info_time_out_cb(void const *n)
     app_tws_send_shared_mobile_dev_info();
 
     start_tws_sharing_pairing_info_timer();
+#ifdef __TWS_ROLE_SWITCH__
+    if(is_tws_master_conn_slave_state())
+    {
+        TRACE("sync tws volume3");
+        app_tws_set_slave_volume(a2dp_volume_get_tws());
+    }
+#endif
 }
 
 bool is_tws_connection_creation_supervisor_need_retry(void)
@@ -870,6 +881,12 @@ static void tws_connection_all_created_callback(void)
     }
 
     app_tws_ui_set_reboot_to_pairing(false);
+#ifdef BES_OTA_TWS
+    if (app_tws_is_master_mode())
+    {
+	ota_get_peer_firmrev();
+    }
+#endif
 
     if (is_simulating_reconnecting_in_progress())
     {
@@ -970,6 +987,9 @@ static void all_connections_cleaned_up_callback(uint8_t errorType)
     
     LOG_PRINT_BT_CONN_MGR("All connections have been down. Current state machine %d",
         CURRENT_CONN_OP_STATE_MACHINE());
+#ifdef __TWS_PAIR_DIRECTLY__      
+    slaveInReconMasterFlag=false;
+#endif
     nv_record_flash_flush();
     switch (CURRENT_CONN_OP_STATE_MACHINE())
     {
@@ -1082,6 +1102,9 @@ static void all_connections_created_callback(void)
                 tws_mode_ptr()->slaveAddr.address);         
 #endif
         }
+#ifdef __TWS_PAIR_DIRECTLY__      
+        slaveInReconMasterFlag=false;
+#endif   
 #if IS_ENABLE_BT_SNIFF_MODE
         app_bt_set_linkpolicy(masterBtRemDev, BTIF_BLP_MASTER_SLAVE_SWITCH|BTIF_BLP_SNIFF_MODE);
 #else
@@ -1103,6 +1126,10 @@ static void all_connections_created_callback(void)
                 app_tws_send_shared_mobile_dev_info();
                 start_tws_sharing_pairing_info_timer();
                 nv_record_flash_flush();
+#ifdef __TWS_ROLE_SWITCH__
+                TRACE("sync tws volume4");
+                app_tws_set_slave_volume(a2dp_volume_get_tws());
+#endif
             }            
             else if (app_tws_is_freeman_mode())
             {      
@@ -1124,7 +1151,11 @@ static void all_connections_created_callback(void)
             if (app_tws_is_master_mode())
             {
                 app_tws_send_shared_mobile_dev_info();
-                start_tws_sharing_pairing_info_timer(); 
+                start_tws_sharing_pairing_info_timer();
+#ifdef __TWS_ROLE_SWITCH__
+                TRACE("sync tws volume5");
+                app_tws_set_slave_volume(a2dp_volume_get_tws());
+#endif
             }
             break;
         default:
@@ -1139,6 +1170,8 @@ static void all_connections_created_callback(void)
         app_tws_start_normal_ble_activities_in_chargerbox();
     }
 #endif
+
+    app_start_connectable_ble_adv(BLE_ADVERTISING_INTERVAL);
 }
 
 void app_resume_mobile_air_path_and_notify_switch_success(void)

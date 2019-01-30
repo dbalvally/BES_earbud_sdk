@@ -36,7 +36,15 @@ static int gd25q32c_write_status(enum DRV_NORFLASH_W_STATUS_T type, uint32_t par
     uint8_t status_s8_s15;
     union DRV_NORFLASH_SEC_REG_CFG_T cfg;
 
-    if (type == DRV_NORFLASH_W_STATUS_QE || type == DRV_NORFLASH_W_STATUS_LB) {
+    if (type == DRV_NORFLASH_W_STATUS_INIT || type == DRV_NORFLASH_W_STATUS_QE ||
+            type == DRV_NORFLASH_W_STATUS_LB) {
+
+        if (type == DRV_NORFLASH_W_STATUS_INIT) {
+            gd25q32c_write_status_s0_s7(param & 0xFF);
+            gd25q32c_write_status_s8_s15((param >> 8) & 0xFF);
+            return 0;
+        }
+
         status_s8_s15 = norflash_read_status_s8_s15();
 
         if (type == DRV_NORFLASH_W_STATUS_QE) {

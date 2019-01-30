@@ -18,6 +18,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct
 {
     int32_t bypass;
@@ -50,5 +54,9 @@ int32_t ec2float_destroy(Ec2FloatState *st);
 int32_t ec2float_set_config(Ec2FloatState *st, const Ec2FloatConfig *cfg);
 
 int32_t ec2float_process(Ec2FloatState *st, int16_t *pcm_in, int16_t *pcm_ref, int32_t pcm_len, int16_t *pcm_out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

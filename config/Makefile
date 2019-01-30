@@ -19,7 +19,7 @@ ccflags-y += \
 	-Iservices/multimedia/audio/process/filters/include
 
 ifeq ($(BT_DEV_NAME),)
-BT_DEV_NAME := $(T)
+BT_DEV_NAME := $(T).$(BUILD_HOSTNAME).$(BUILD_USERNAME)
 endif
 
 ccflags-y += -DBT_DEV_NAME=$(BT_DEV_NAME) $(CUST_TGT_FLAGS)

@@ -20,6 +20,24 @@
 #include "string.h"
 #include "hal_timer.h"
 
+/*
+|-----|-------|----------------------------------|
+|     |  crc  |           Discription            |
+|     | ----- | -------------------------------- |
+|     |   -3  |      Can not find head name      |
+|     | ----- | -------------------------------- |
+|     |   -2  |  Can not find callback function  |
+|     | ----- | -------------------------------- |
+| res |   -1  |          Unknown issue           |
+|     | ----- | -------------------------------- |
+|     |   0   |                OK                |
+|     | ----- | -------------------------------- |
+|     |   1   |    Data length is mismatching    |
+|     | ----- | -------------------------------- |
+|     |   >1  |      Issue from application      |
+|-----|-------|----------------------------------|
+ */
+
 #define HAL_CMD_PREFIX_SIZE     4
 #define HAL_CMD_CRC_SIZE        4
 #define HAL_CMD_NAME_SIZE       12
@@ -40,9 +58,13 @@
 #define HAL_CMD_TX_BUF_SIZE     (100)
 
 
-#define HAL_CMD_LIST_NUM    6
+#define HAL_CMD_LIST_NUM    10
 
-
+typedef enum {
+    HAL_CMD_RX_START,
+    HAL_CMD_RX_STOP,
+    HAL_CMD_RX_DONE
+} hal_cmd_rx_status_t;
 
 typedef struct {
     uint32_t len;
@@ -86,7 +108,6 @@ typedef struct {
 } hal_cmd_t;
 
 hal_cmd_t hal_cmd;
-CMD_CALLBACK_HANDLER_T hal_cmd_callback = NULL;	
 
 #define HAL_CMD_ID              HAL_UART_ID_0
 
@@ -133,7 +154,6 @@ void hal_cmd_dma_rx_irq_handler (uint32_t xfer_size, int dma_error, union HAL_UA
         // mask.RT = 1
         hal_cmd.rx_len = xfer_size;
         hal_cmd.rx_status = HAL_CMD_RX_DONE;
-		hal_cmd_callback(hal_cmd.rx_status);
     }
 }
 
@@ -150,11 +170,6 @@ int hal_cmd_init (void)
     HAL_CMD_TRACE("[%s]", __func__);
     hal_iomux_set_uart0();
     return 0;
-}
-
-void hal_cmd_set_callback(CMD_CALLBACK_HANDLER_T handler)
-{
-    hal_cmd_callback = handler;		
 }
 
 int hal_cmd_open (void)
@@ -178,7 +193,7 @@ int hal_cmd_open (void)
 
     hal_cmd.uart_work = 1;
     hal_cmd.rx_status = HAL_CMD_RX_STOP;
-	hal_cmd_callback(hal_cmd.rx_status);
+
     return 0;
 }
 
@@ -199,6 +214,10 @@ int hal_cmd_close (void)
 int hal_cmd_register(char *name, hal_cmd_callback_t callback)
 {
     int ret = -1;
+
+    ASSERT(strlen(name) < HAL_CMD_NAME_SIZE, "[%s] strlen(%s) = %d >= HAL_CMD_NAME_SIZE", __func__,
+                                                                                        name,
+                                                                                        strlen(name));
 
     ret = hal_cmd_list_register(name, callback);
 
@@ -235,7 +254,7 @@ static int hal_cmd_rx_start (void)
     ASSERT(!ret, "!!%s: UART recv failed (%d)!!", __func__, ret);
 
     hal_cmd.rx_status = HAL_CMD_RX_START;
-	hal_cmd_callback(hal_cmd.rx_status);
+
     return ret;
 }
 
@@ -248,7 +267,7 @@ static int hal_cmd_rx_process (void)
     ret = hal_cmd_list_process(hal_cmd.rx_buf);
 
     hal_cmd.rx_status = HAL_CMD_RX_STOP;
-	hal_cmd_callback(hal_cmd.rx_status);
+
     return ret;
 }
 
@@ -295,7 +314,7 @@ static int hal_cmd_tx_process (void)
     return ret;
 }
 
-int hal_cmd_run (hal_cmd_rx_status_t status)
+int hal_cmd_run (void)
 {
     int ret = -1;
 
@@ -311,13 +330,19 @@ int hal_cmd_run (hal_cmd_rx_status_t status)
     //     pre_time_ms = curr_time_ms;
     // } 
 
-    if(status == HAL_CMD_RX_DONE)
+    if(hal_cmd.rx_status == HAL_CMD_RX_DONE)
     {
         ret = hal_cmd_rx_process();
+
+        if (ret)
+        {
+            hal_cmd.res.crc = ret;
+        }
+
         ret = hal_cmd_tx_process();
     }
 
-    if(status == HAL_CMD_RX_STOP)
+    if(hal_cmd.rx_status == HAL_CMD_RX_STOP)
     {
         ret = hal_cmd_rx_start();
     }
@@ -346,7 +371,7 @@ static int hal_cmd_list_get_id(char *name)
 
 static int hal_cmd_list_add(char *name, hal_cmd_callback_t callback)
 {
-    if(hal_cmd.list_num < HAL_CMD_LIST_NUM-1)
+    if(hal_cmd.list_num < HAL_CMD_LIST_NUM)
     {
         memcpy(hal_cmd.list[hal_cmd.list_num].name, name, strlen(name));
         hal_cmd.list[hal_cmd.list_num].callback = callback;
@@ -405,6 +430,7 @@ static int hal_cmd_list_parse(uint8_t *buf, hal_cmd_cfg_t *cfg)
 
 static int hal_cmd_list_process(uint8_t *buf)
 {
+    int ret = -1;
     int id = 0;
     hal_cmd_cfg_t cfg;
 
@@ -415,17 +441,18 @@ static int hal_cmd_list_process(uint8_t *buf)
     if(id == -1)
     {
         TRACE("[%s] %s is invalid", __func__, cfg.name);
-        return -1;
+        return -2;
     }
 
     if(hal_cmd.list[id].callback)
     {
-        hal_cmd.list[id].callback(cfg.data, cfg.len);
+        ret = hal_cmd.list[id].callback(cfg.data, cfg.len);
     }
     else
     {
         TRACE("[%s] %s has not callback", __func__, hal_cmd.list[id].name);
+        ret = -3;
     }
 
-    return 0;
+    return ret;
 }

@@ -173,9 +173,9 @@ static void app_factorymode_audioloopswitch(APP_KEY_STATUS *status, void *param)
     onaudioloop = onaudioloop?false:true;
 
     if (onaudioloop)
-        app_audio_sendrequest((uint8_t)APP_FACTORYMODE_AUDIO_LOOP, (uint8_t)APP_BT_SETTING_OPEN, 0,0);
+        app_audio_sendrequest(APP_FACTORYMODE_AUDIO_LOOP, (uint8_t)APP_BT_SETTING_OPEN, 0,0);
     else
-        app_audio_sendrequest((uint8_t)APP_FACTORYMODE_AUDIO_LOOP, (uint8_t)APP_BT_SETTING_CLOSE, 0,0);
+        app_audio_sendrequest(APP_FACTORYMODE_AUDIO_LOOP, (uint8_t)APP_BT_SETTING_CLOSE, 0,0);
 }
 
 void app_factorymode_test_key_init(void)

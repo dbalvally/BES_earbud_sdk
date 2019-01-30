@@ -103,7 +103,7 @@ __STATIC int gattc_write_req_ind_handler(ke_msg_id_t const msgid,
                     prf_dst_task_get(&datapathps_env->prf_env, conidx),
                     prf_src_task_get(&datapathps_env->prf_env, conidx),
                     ble_datapath_rx_data_ind_t,
-                    sizeof(struct ble_datapath_rx_data_ind_t) + param->length);
+                    param->length);
 
 			ind->length = param->length;
 			memcpy((uint8_t *)(ind->data), &(param->value), param->length);
@@ -346,7 +346,7 @@ __STATIC int gattc_event_ind_handler(ke_msg_id_t const msgid,
 						prf_dst_task_get(&datapathps_env->prf_env, conidx),
 						prf_src_task_get(&datapathps_env->prf_env, conidx),
 						ble_datapath_rx_data_ind_t,
-						sizeof(struct ble_datapath_rx_data_ind_t) + param->length);
+						param->length);
 				
 				ind->length = param->length;
 				memcpy((uint8_t *)(ind->data), &(param->value), param->length);

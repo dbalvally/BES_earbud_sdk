@@ -59,8 +59,17 @@
 #include "app_voicepath.h"
 #endif
 
+
+#ifdef BES_OTA_TWS
+#include "ota_control.h"
+#endif
+
 #ifdef __TWS__
 extern  tws_dev_t  tws;
+#endif
+
+#ifdef __AMA_VOICE__
+#include "app_ama_handle.h"
 #endif
 
 #ifdef __3RETX_SNIFF__
@@ -469,6 +478,11 @@ void app_bt_disconnect_sco_link(void)
         LOG_PRINT_BT_CONN_MGR("Disconnect Sco !!!");
         btif_hf_disc_audio_link(hf_channel_tmp);
     }
+    else
+    {
+        LOG_PRINT_BT_CONN_MGR("Stop Sco !!!");
+        app_audio_manager_sendrequest(APP_BT_STREAM_MANAGER_STOP,BT_STREAM_VOICE,BT_DEVICE_ID_1,MAX_RECORD_NUM,0,0);
+    }
 }
 
 void bt_global_mobile_disconnected_ind_common_handler(const btif_event_t *Event)
@@ -814,6 +828,10 @@ void bt_global_tws_disconnected_ind_common_handler(const btif_event_t *Event)
         }
         LOG_PRINT_BT_CONN_MGR_DUMP8("0x%02x ", btif_me_get_callback_event_rem_dev_bd_addr(Event)->address, BTIF_BD_ADDR_SIZE);
 
+#ifdef BES_OTA_TWS
+	ota_check_and_reboot_to_use_new_image();
+#endif
+
 #ifdef __TWS_PAIR_DIRECTLY__
         if((BTIF_BEC_USER_TERMINATED == btif_me_get_callback_event_disconnect_rem_dev_disc_reason(Event))
             &&(CONN_OP_STATE_MACHINE_ROLE_SWITCH != CURRENT_CONN_OP_STATE_MACHINE()))
@@ -926,9 +944,6 @@ void bt_global_connected_handler(const btif_event_t *Event)
 #endif
 
         if (isConnectedWithMobile){
-        #if VOICE_DATAPATH
-            app_voice_path_bt_delete_sdp_service();
-        #endif
             if (!(IS_WAITING_FOR_MOBILE_CONNECTION() || IS_CONNECTING_MOBILE())){
                 LOG_PRINT_BT_CONN_MGR("%s warning isMoble but not in connectMoble state ", __FUNCTION__);
 #ifdef __TWS_PAIR_DIRECTLY__
@@ -1078,6 +1093,7 @@ static void app_bt_global_handle(const btif_event_t *Event)
 {
 
     uint8_t etype = btif_me_get_callback_event_type(Event);
+    btif_remote_device_t *remDev;
 
     switch (etype) {
         case BTIF_BTEVENT_HCI_INITIALIZED:
@@ -1173,7 +1189,6 @@ static void app_bt_global_handle(const btif_event_t *Event)
                 // TWS device event
                 btif_cmgr_handler_t *cmgrHandler;
                 btif_sniff_info_t   sniffInfo;
-                btif_remote_device_t *remDev;
                 a2dp_stream_t *tws_source;
 
                 if ((app_tws_get_conn_state() == TWS_MASTER_CONN_SLAVE) && btapp_hfp_call_is_active())
@@ -1562,7 +1577,10 @@ static int app_bt_handle_process(APP_MESSAGE_BODY *msg_body)
                 app_bt_accessmode_set(BTIF_BAM_CONNECTABLE_ONLY);
             }else if (msg_body->message_Param0 == BTIF_BAM_NOT_ACCESSIBLE){
                 app_bt_accessmode_set(BTIF_BAM_NOT_ACCESSIBLE);
+            }else if (msg_body->message_Param0 == BTIF_BAM_LIMITED_ACCESSIBLE){
+                app_bt_accessmode_set(BTIF_BAM_LIMITED_ACCESSIBLE);
             }
+            
             break;
         case APP_BT_REQ_CUSTOMER_CALL:
             if (msg_body->message_ptr){
@@ -2432,4 +2450,40 @@ bool app_bt_get_device_bdaddr(uint8_t deviceId, uint8_t* btAddr)
     }
 }
 
+
+void hfp_service_connected_set(bool on)
+{
+    TRACE("%s %d", __func__, on);
+    if(on)
+        bt_profile_manager[BT_DEVICE_ID_1].hfp_connect = bt_profile_connect_status_success;
+    else
+        bt_profile_manager[BT_DEVICE_ID_1].hfp_connect = bt_profile_connect_status_unknown;
+}
+
+bool app_is_hfp_service_connected(void)
+{
+    return (bt_profile_manager[BT_DEVICE_ID_1].hfp_connect == bt_profile_connect_status_success);
+}
+
+void a2dp_service_connected_set(bool on)
+{
+    TRACE("%s %d", __func__, on);
+    if(on)
+        bt_profile_manager[BT_DEVICE_ID_1].a2dp_connect = bt_profile_connect_status_success;
+    else
+        bt_profile_manager[BT_DEVICE_ID_1].a2dp_connect = bt_profile_connect_status_unknown;
+}
+
+bool a2dp_service_is_connected(void)
+{
+	return (bt_profile_manager[BT_DEVICE_ID_1].a2dp_connect == bt_profile_connect_status_success);
+}
+
+bool app_is_link_connected()
+{
+	if(btif_me_get_activeCons() == 0)
+		return false;
+
+	return true;
+}
 

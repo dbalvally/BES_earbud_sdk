@@ -26,15 +26,12 @@
 #include "tgt_hardware.h"
 
 
-extern uint32_t __factory_start[];
 extern uint32_t __userdata_start[];
 extern uint32_t __userdata_start_bak[];
-uint8_t nv_record_dev_rev = NVREC_DEV_VERSION_1;
 
 nv_record_struct nv_record_config;
 static bool nvrec_init = false;
 static bool nvrec_mempool_init = false;
-static bool dev_sector_valid = false;
 static uint32_t usrdata_ddblist_pool[1024] __attribute__((section(".userdata_pool")));
 static void nv_record_print_dev_record(const btif_device_record_t* record)
 {
@@ -666,7 +663,7 @@ void nv_record_sector_clear(void)
 {
     uint32_t lock;
 
-    lock = int_lock();
+    lock = int_lock_global();
     pmu_flash_write_config();
 
     hal_norflash_erase(HAL_NORFLASH_ID_0,(uint32_t)(__userdata_start_bak),0x1000);
@@ -675,7 +672,7 @@ void nv_record_sector_clear(void)
     pmu_flash_read_config();
     nvrec_init = false;
     nvrec_mempool_init = false;
-    int_unlock(lock);
+    int_unlock_global(lock);
 }
 
 #define DISABLE_NV_RECORD_CRC_CHECK_BEFORE_FLUSH    1
@@ -731,7 +728,7 @@ int nv_record_flash_flush(void)
     LOG_PRINT_NVREC("%s,nv_record_flash_flush,nv_record_config.config=0x%x\n",nvrecord_tag,nv_record_config.config);
 tryagain:
 
-    lock = int_lock();
+    lock = int_lock_global();
     crc = crc32(0,(uint8_t *)(&usrdata_ddblist_pool[pos_heap_contents]),(sizeof(usrdata_ddblist_pool)-(pos_heap_contents*sizeof(uint32_t))));
     LOG_PRINT_NVREC("%s,crc=%x.\n",nvrecord_tag,crc);
     usrdata_ddblist_pool[pos_version_and_magic] = ((nvrecord_struct_version<<16)|nvrecord_magic);
@@ -748,16 +745,16 @@ tryagain:
     pmu_flash_read_config();
     nv_record_config.is_update = false;
 
-    int_unlock(lock);
+    int_unlock_global(lock);
 
     hal_sys_timer_delay(MS_TO_TICKS(20));
 
-    lock=int_lock();
+    lock=int_lock_global();
     pmu_flash_write_config();
     hal_norflash_erase(HAL_NORFLASH_ID_0,(uint32_t)(__userdata_start_bak),sizeof(usrdata_ddblist_pool));
     hal_norflash_write(HAL_NORFLASH_ID_0,(uint32_t)(__userdata_start_bak),(uint8_t *)usrdata_ddblist_pool,sizeof(usrdata_ddblist_pool));
     pmu_flash_read_config();
-    int_unlock(lock);
+    int_unlock_global(lock);
 
 #if 1//def nv_record_debug
     lock = int_lock();
@@ -782,16 +779,4 @@ tryagain:
     return 0;
 }
 
-
-const char* nvrec_dev_get_ble_name(void)
-{
-    if ((NVREC_DEV_VERSION_1 == nv_record_dev_rev) || (!dev_sector_valid))
-    {
-        return BLE_DEFAULT_NAME;
-    }
-    else
-    {
-        return (const char *)(&__factory_start[rev2_dev_ble_name]);
-    }
-}
 

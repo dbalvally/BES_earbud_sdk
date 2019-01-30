@@ -26,14 +26,14 @@ extern "C" {
 #define FIR_COEF_NUM                        384
 
 typedef struct {
-    int8_t  gain0;
-    int8_t  gain1;
-    int16_t len;
-    int16_t coef[FIR_COEF_NUM];
+    float  gain;
+    int32_t len;
+    int32_t coef[FIR_COEF_NUM];
 } FIR_CFG_T;
 
 int fir_open(enum AUD_SAMPRATE_T sample_rate, enum AUD_BITS_T sample_bits,enum AUD_CHANNEL_NUM_T ch_num, void *eq_buf, uint32_t len);
 int fir_set_cfg(const FIR_CFG_T *cfg);
+int fir_set_cfg_ch(const FIR_CFG_T *cfg,int ch);
 int fir_run(uint8_t *buf, uint32_t len);
 int fir_close(void);
 

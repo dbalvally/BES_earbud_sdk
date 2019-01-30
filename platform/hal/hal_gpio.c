@@ -154,6 +154,14 @@ void hal_gpio_pin_set_dir(enum HAL_GPIO_PIN_T pin, enum HAL_GPIO_DIR_T dir, uint
 #endif
     ASSERT(pin < max_pin, err_bad_pin, pin, max_pin);
 
+    if(dir == HAL_GPIO_DIR_OUT) {
+        if(val_for_out) {
+            hal_gpio_pin_set(pin);
+        } else {
+            hal_gpio_pin_clr(pin);
+        }
+    }
+
     if (0)
     {
     }
@@ -187,11 +195,6 @@ void hal_gpio_pin_set_dir(enum HAL_GPIO_PIN_T pin, enum HAL_GPIO_DIR_T dir, uint
         else
             gpio_bank[bank]->port[port].GPIO_DDR &= ~(0x1<<pin_offset);
     }
-
-    if(val_for_out)
-        hal_gpio_pin_set(pin);
-    else
-        hal_gpio_pin_clr(pin);
 }
 
 void hal_gpio_pin_set(enum HAL_GPIO_PIN_T pin)

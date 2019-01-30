@@ -855,29 +855,6 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch19_2 =
     0xc0006704,
     (uint8_t *)bes2300_patch19_ins_data_2
 };//esco retx 3 dec 2
-#else
-
-const uint32_t bes2300_patch19_ins_data_2[] =
-{
-    0x3026f853,
-	0xf8842000,
-	0xbf0002fa,
-	0xba2af60f,
-};
-
-const BTDRV_PATCH_STRUCT bes2300_ins_patch19_2 =
-{
-    19,
-    BTDRV_PATCH_ACT,
-    sizeof(bes2300_patch19_ins_data_2),
-    0x00015b64,
-    0xbdcef1f0,
-    0xc0006704,
-    (uint8_t *)bes2300_patch19_ins_data_2
-};//bt role switch clear rswerror at lc_epr_cmp
-
-#endif
-
 
 const BTDRV_PATCH_STRUCT bes2300_ins_patch20_2 =
 {
@@ -893,6 +870,53 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch20_2 =
     0,
     NULL
 };//support 2/3 esco retx 
+
+#else
+
+const uint32_t bes2300_patch19_ins_data_2[] =
+{
+    0x3026f853,
+    0xf8842000,
+    0xbf0002fa,
+    0xba2af60f,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch19_2 =
+{
+    19,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch19_ins_data_2),
+    0x00015b64,
+    0xbdcef1f0,
+    0xc0006704,
+    (uint8_t *)bes2300_patch19_ins_data_2
+};//bt role switch clear rswerror at lc_epr_cmp
+
+const uint32_t bes2300_patch20_ins_data_2[] =
+{
+    0xf8957812,
+    0xf89500bc,
+    0x287810bb,
+    0x2978d001,
+    0x4613d102,
+    0xbddcf626,
+    0xbf004413,
+    0xbdd8f626 
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch20_2 =
+{
+    20,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch20_ins_data_2),
+    0x0002d2ec,
+    0xba18f1d9,
+    0xc0006720,
+    (uint8_t *)bes2300_patch20_ins_data_2
+};//ld_acl_frm_isr evt->current_prio
+
+#endif
 
 const BTDRV_PATCH_STRUCT bes2300_ins_patch21_2 =
 {
@@ -2075,7 +2099,7 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch52_2 =
 #ifdef __POWER_CONTROL_TYPE_1__
 const uint32_t bes2300_patch53_ins_data_2[] =
 {
-    0xf0135243,
+    0xf0035243,
     0x2b00030f,
     0x2000bf14,
     0x47702001,
@@ -2100,7 +2124,7 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch53_2 =
     BTDRV_PATCH_ACT,
     0,
     0x000033f4,
-    0xe0072200,
+    0xe0072000,
     0,
     NULL
 };
@@ -2315,7 +2339,7 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch2_3=
     0xb9d6f1eb,
     0xc00068d0,
     (uint8_t *)bes2300_patch2_ins_data_3
-};
+};//role switch
 
 
 
@@ -2342,7 +2366,7 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch3_3 =
     0xb99af1eb,
     0xc00068f0,
     (uint8_t *)bes2300_patch3_ins_data_3
-};
+};//role switch
 
 const uint32_t bes2300_patch4_ins_data_3[] =
 {
@@ -2494,11 +2518,125 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch9_3 =
     (uint8_t *)bes2300_patch9_ins_data_3
 };//bitoff check
 
+const uint32_t bes2300_patch10_ins_data_3[] =
+{
+    0xf8957812,
+    0xf89500bc,
+    0x287810bb,
+    0x2978d001,
+    0x4613d102,
+    0xba32f627,
+    0xbf004413,
+    0xba2ef627 
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch10_3 =
+{
+    10,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch10_ins_data_3),
+    0x0002de28,
+    0xbdc2f1d8, 
+    0xc00069b0,
+    (uint8_t *)bes2300_patch10_ins_data_3
+};//ld_acl_frm_isr
+
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch11_3 =
+{
+    11,
+    BTDRV_PATCH_ACT,
+    0,
+    0x00003444,
+    0xe00f382d,
+    0,
+    NULL
+};///hw rssi read
+
+/*******************************************
+ patch 12 and 13 is used for gg role switch
+ usually not enable
+*******************************************/
+const uint32_t bes2300_patch12_ins_data_3[] =
+{
+    0xd0012800,
+    0xbe68f623,
+    0x4b18bb66,
+    0xf7ffb353,
+    0xf895ffe1,
+    0x428330b2,
+    0xbb1ed124,
+    0xf986f61e,
+    0x30b3f895,
+    0x2b01b13b,
+    0xf8d5d107,
+    0x4403308c,
+    0x4378f023,
+    0x4603e002,
+    0x2300e000,
+    0x031ff003,
+    0x0320f1c3,
+    0xf0234403,
+    0x60ab4378,
+    0x799b4b06,
+    0xf5fc75ab,
+    0xf890f87f,
+    0xf5c33025,
+    0x330c53ea,
+    0xbf00826b,
+    0xbf01f623,
+    0xc0000200,
+    0xc0006d98,
+    0x00000000,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch12_3 =
+{
+    12,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch12_ins_data_3),
+    0x0002a9fc,
+    0xb994f1dc,
+    0xc0006d28,
+    (uint8_t *)bes2300_patch12_ins_data_3
+};//acl fix interval
+
+const uint32_t bes2300_patch13_ins_data_3[] =
+{
+    0xf8842300,
+    0xf89430b4,
+    0xf00050b2,
+    0x4285f807,
+    0xbf00d102,
+    0xb808f624,
+    0xb820f624,
+    0x781b4b07,
+    0xd1032b01,
+    0xf8934b05,
+    0x47700042,
+    0xbf062b02,
+    0xf8934b02,
+    0x2003004a,
+    0xbf004770,
+    0xc00062ac,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch13_3 =
+{
+    13,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch13_ins_data_3),
+    0x0002acfc,
+    0xbff0f1db,
+    0xc0006ce0,
+    (uint8_t *)bes2300_patch13_ins_data_3
+};//sco role switch record slave acl bt clk
+
 
 /////2300 t6 patch
 static const uint32_t best2300_ins_patch_config_3[] =
 {
-    10,
+    14,
     (uint32_t)&bes2300_ins_patch0_3,
     (uint32_t)&bes2300_ins_patch1_3,
     (uint32_t)&bes2300_ins_patch2_3,
@@ -2509,7 +2647,10 @@ static const uint32_t best2300_ins_patch_config_3[] =
     (uint32_t)&bes2300_ins_patch7_3,
     (uint32_t)&bes2300_ins_patch8_3,
     (uint32_t)&bes2300_ins_patch9_3,
-    
+    (uint32_t)&bes2300_ins_patch10_3,
+    (uint32_t)&bes2300_ins_patch11_3,
+    (uint32_t)&bes2300_ins_patch12_3,
+    (uint32_t)&bes2300_ins_patch13_3,
 };
 
 void btdrv_ins_patch_write(BTDRV_PATCH_STRUCT *ins_patch_p)
@@ -2646,6 +2787,14 @@ void btdrv_data_patch_write(const BTDRV_PATCH_STRUCT *d_patch_p)
 }
 
 
+void btdrv_ins_patch_disable(uint8_t index)
+{
+   uint32_t addr=0;
+    btdrv_write_memory(_32_Bit,(BTDRV_PATCH_INS_COMP_ADDR_START + index*4),
+                       (uint8_t *)&addr,4);
+    
+}
+
 
 void btdrv_data_patch_init(void)
 {
@@ -2749,16 +2898,589 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch5_testmode_2 =
     NULL
 };
 
-static const uint32_t ins_patch_2300_config_testmode[] =
+const BTDRV_PATCH_STRUCT bes2300_ins_patch6_testmode_2 =
 {
     6,
+    BTDRV_PATCH_ACT,
+    0,
+    0x00018450,
+    0x78b3bF00,
+    0,
+    NULL
+};
+
+
+const uint32_t bes2300_patch7_ins_test_data_2[] =
+{   
+    0x30fcf8d4,
+    0xd0092b00,
+    0x680b4905,
+    0x3f00f413,
+    0x680bd004,
+    0x3300f423,
+    0xbf00600b,
+    0xbaeff627,
+    0xd02200a4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch7_testmode_2 =
+{
+    7,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch7_ins_test_data_2),    
+    0x0002df58,
+    0xbd12f1d8,
+    0xc0006980,
+    (uint8_t *)bes2300_patch7_ins_test_data_2
+};
+
+
+
+const uint32_t bes2300_patch8_ins_test_data_2[] =
+{   
+    0x30fcf8d4,
+    0xd00b2b00,
+    0xf003789b,
+    0x2b0503fd,
+    0x4b04d106,
+    0xf443681b,
+    0x4a023300,
+    0xbf006013,
+    0xbc50f625,
+    0xd02200a4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch8_testmode_2 =
+{
+    8,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch8_ins_test_data_2),    
+    0x0002c140,
+    0xbc36f1da,
+    0xc00069b0,
+    (uint8_t *)bes2300_patch8_ins_test_data_2
+};
+
+
+
+
+const uint32_t bes2300_patch9_ins_test_data_2[] =
+{   
+    0x5bf24a03,
+    0x080ff002,
+    0xbccbf622,
+    0xd0211160,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch9_testmode_2 =
+{
+    9,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch9_ins_test_data_2),    
+    0x000290A0,
+    0xbb30f1dd,
+    0xc0006704,
+    (uint8_t *)bes2300_patch9_ins_test_data_2
+};
+
+
+const uint32_t bes2300_patch10_ins_test_data_2[] =
+{   
+    0xf0025bf2,
+    0xbf00020f,
+    0xbce8f622,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch10_testmode_2 =
+{
+    10,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch10_ins_test_data_2),    
+    0x000290ec,
+    0xbb12f1dd,
+    0xc0006714,
+    (uint8_t *)bes2300_patch10_ins_test_data_2
+};
+
+
+
+const uint32_t bes2300_patch11_ins_test_data_2[] =
+{   
+    0xf0035bf3,
+    0xbf00080f,
+    0xbcfaf622,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch11_testmode_2 =
+{
+    11,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch11_ins_test_data_2),    
+    0x0002911c,
+    0xbb00f1dd,
+    0xc0006720,
+    (uint8_t *)bes2300_patch11_ins_test_data_2
+};
+
+
+
+const uint32_t bes2300_patch12_ins_test_data_2[] =
+{   
+    0xf0035bf3,
+    0xbf00010f,
+    0xbd1af622,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch12_testmode_2 =
+{
+    12,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch12_ins_test_data_2),    
+    0x0002916c,
+    0xbae0f1dd,
+    0xc0006730,
+    (uint8_t *)bes2300_patch12_ins_test_data_2
+};
+
+#ifdef __POWER_CONTROL_TYPE_1__
+const uint32_t bes2300_patch13_ins_test_data_2[] =
+{
+    0xf0035243,
+    0x2b00030f,
+    0x2000bf14,
+    0x47702001,
+};
+
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch13_testmode_2 =
+{
+    13,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch13_ins_test_data_2),
+    0x000033bc,
+    0xbdb0f203,
+    0xc0006f20,
+    (uint8_t *)bes2300_patch13_ins_test_data_2
+};//pwr controll
+#else
+    
+const BTDRV_PATCH_STRUCT bes2300_ins_patch13_testmode_2 =
+{
+    13,
+    BTDRV_PATCH_INACT,
+    0,
+    0x000033f4,
+    0xe0072000,
+    0,
+    NULL
+};
+#endif
+
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch14_testmode_2 =
+{
+    14,
+    BTDRV_PATCH_ACT,
+    0,
+    0x00028E8C,
+    0xe0CFBF00,
+    0,
+    NULL
+};
+
+
+
+const uint32_t bes2300_patch15_ins_test_data_2[] =
+{
+    0xb2db1e63,
+    0xd8282b01,
+    0x30fcf8d6,
+    0xf002789a,
+    0x2a0502fd,
+    0x4912d121,
+    0x3201680a,
+    0x4a11600a,
+    0x8000f8c2,
+    0xf3c29a05,
+    0x490f02c9,
+    0x490f600a,
+    0x8c18600c,
+    0x4050f100,
+    0x1004f500,
+    0xf8934b0c,
+    0xebc331cb,
+    0x490b03c3,
+    0x1013f831,
+    0xf101b289,
+    0xf5014150,
+    0xf6401104,
+    0xf626fc93,
+    0xbf00ba9a,
+    0xc00067f8,
+    0xc00067fc,
+    0xc0006800,
+    0xc0006804,
+    0xc0005c0c,
+    0xd02115a0,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch15_testmode_2 =
+{
+    15,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch15_ins_test_data_2),    
+    0x0002cd04,
+    0xbd3cf1d9,
+    0xc0006780,
+    (uint8_t *)bes2300_patch15_ins_test_data_2
+};
+
+const uint32_t bes2300_patch16_ins_test_data_2[] =
+{
+    0xb2d23a05,
+    0xd9002a03,
+    0x2A00e040,
+    0x2A02D001,
+    0xBF00D13E,
+    0x681b4b1F,
+    0xD0392b00,
+    0xeb08BF00,
+    0xf8370288,
+    0xb29b3012,
+    0x0378f023,
+    0x8809491A,
+    0x03c1ea43,
+    0xf827b29b,
+    0x4b193012,
+    0xf043681b,
+    0x49160304,
+    0xea438809,
+    0xb29b03c1,
+    0x3012f829,
+    0x30fcf8d5,
+    0x49138c1b,
+    0x3012f821,
+    0x3012f83a,
+    0x030ef3c3,
+    0x3012f82a,
+    0x30c2f895,
+    0xf383fab3,
+    0xf885095b,
+    0xf89530c2,
+    0x330130c3,
+    0x30c3f885,
+    0x68134a04,
+    0x60133b01,
+    0xbbabf625,
+    0xba07f625,
+    0xbbacf625,
+    0xc00067f8,
+    0xc00067fc,
+    0xc0006800,
+    0xc0006804,
+    0xd02115d4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch16_testmode_2 =
+{
+    16,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch16_ins_test_data_2),    
+    0x0002bca0,
+    0xbdb4f1da,
+    0xc000680c,
+    (uint8_t *)bes2300_patch16_ins_test_data_2
+};
+////end for power control test mode
+
+
+const uint32_t bes2300_patch17_ins_test_data_2[] =
+{   
+    0x20014b04,
+    0x4b026018,
+    0xbf00689b,
+    0xbc0ef610,
+    0xc0004100,
+    0xc00068d8,
+    0x00000000
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch17_testmode_2 =
+{
+    17,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch17_ins_test_data_2),    
+    0x000170E8,
+    0xbbeaf1ef,
+    0xc00068C0,
+    (uint8_t *)bes2300_patch17_ins_test_data_2
+};
+
+
+const uint32_t bes2300_patch18_ins_test_data_2[] =
+{   
+    0x20024b04,
+    0x4b026018,
+    0xbf00689b,
+    0xbdbaf611,
+    0xc0004100,
+    0xc00068d8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch18_testmode_2 =
+{
+    18,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch18_ins_test_data_2),    
+    0x00018460,
+    0xba3ef1ee,
+    0xc00068e0,
+    (uint8_t *)bes2300_patch18_ins_test_data_2
+};
+
+
+const uint32_t bes2300_patch19_ins_test_data_2[] =
+{   
+    0x20014b04,
+    0x4b026018,
+    0xbf0068db,
+    0xbc1af610,
+    0xc0004100,
+    0xc00068d8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch19_testmode_2 =
+{
+    19,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch19_ins_test_data_2),    
+    0x00017140,
+    0xbbdef1ef,
+    0xc0006900,
+    (uint8_t *)bes2300_patch19_ins_test_data_2
+};
+
+
+const uint32_t bes2300_patch20_ins_test_data_2[] =
+{   
+    0x20024b04,
+    0x4b026018,
+    0x462068db,
+    0xbda4f611,
+    0xc0004100,
+    0xc00068d8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch20_testmode_2 =
+{
+    20,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch20_ins_test_data_2),    
+    0x00018474,
+    0xba54f1ee,
+    0xc0006920,
+    (uint8_t *)bes2300_patch20_ins_test_data_2
+};
+
+
+const uint32_t bes2300_patch21_ins_test_data_2[] =
+{   
+    0xd91b429a,
+    0x5a42b410,
+    0xb2dc3301,
+    0x427ff402,
+    0x52424322,
+    0x68104a0c,
+    0xd00a2801,
+    0xf8924a0b,
+    0x42830030,
+    0x2000bf14,
+    0x4a072001,
+    0x60112100,
+    0x2000e001,
+    0xf85d6010,
+    0x47704b04,
+    0x20004b02,
+    0x20016018,
+    0xbf004770,
+    0xc00068d8,
+    0xc0004100,
+
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch21_testmode_2 =
+{
+    21,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch21_ins_test_data_2),    
+    0x000033e0,
+    0xbaaef203,
+    0xc0006940,
+    (uint8_t *)bes2300_patch21_ins_test_data_2
+};
+
+
+
+const uint32_t bes2300_patch22_ins_test_data_2[] =
+{   
+    0xf0135a43,     
+    0xd016030f,
+    0x3b015a42,     
+    0xf402b2db,     
+    0x4313427f,
+    0xf0135243,     
+    0x4a08030f,
+    0x28016810,     
+    0x2b00d006,     
+    0x2000bf14,     
+    0x21002001,     
+    0xe0016011,     
+    0x60102000,     
+    0x20014770,     
+    0xbf004770,     
+    0xc00068d8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch22_testmode_2 =
+{
+    22,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch22_ins_test_data_2),    
+    0x000033a8,
+    0xbafaf203,
+    0xc00069a0,
+    (uint8_t *)bes2300_patch22_ins_test_data_2
+};
+
+
+#if 0
+const uint32_t bes2300_patch23_ins_test_data_2[] =
+{   
+    0xf8934b14,     
+    0xebc331cb,
+    0x005b03c3,
+    0x4812461f,     
+    0x4a124910,     
+    0xf2414d12,     
+    0x5a3b5496,
+    0x030ef3c3,
+    0xf891523b,     
+    0x330131cb,
+    0xd5034013,     
+    0xf0633b01,     
+    0x33010303,
+    0x31cbf881,
+    0xebc3b2db,     
+    0x005b03c3,
+    0x682e461f,     
+    0xf3c64423,     
+    0x42b3060e,
+    0xbf00d1e5,     
+    0xba3df626,
+    0xc0005c0c,
+    0xd0211596,
+    0x80000003,
+    0xd022002c,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch23_testmode_2 =
+{
+    23,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch23_ins_test_data_2),    
+    0x0002cdf4,
+    0xbdfcf1d9,
+    0xc00069f0,
+    (uint8_t *)bes2300_patch23_ins_test_data_2
+};
+#else
+
+const uint32_t bes2300_patch23_ins_test_data_2[] =
+{   
+    0x60b39b00,     
+    0xfb00206e,     
+    0x4a0bf004,
+    0xf0436813,     
+    0x60130302,
+    0x4b092202,     
+    0xf5a3601a,     
+    0x3bb6436e,
+    0x3003f830,
+    0x030cf3c3,
+    0x5300f443,
+    0xf8204a04,     
+    0xbf003002,
+    0xb840f625,
+    0xD022000C,
+    0xd0220018,
+    0xd0211162,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch23_testmode_2 =
+{
+    23,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch23_ins_test_data_2),    
+    0x0002baa4,
+    0xbfa4f1da,
+    0xc00069f0,
+    (uint8_t *)bes2300_patch23_ins_test_data_2
+};
+#endif
+const BTDRV_PATCH_STRUCT bes2300_ins_patch24_testmode_2 =
+{
+    24,
+    BTDRV_PATCH_ACT,
+    0,
+    0x0003772c,
+    0xf7c92100,
+    0,
+    NULL,
+};
+
+
+static const uint32_t ins_patch_2300_config_testmode[] =
+{
+    25,
     (uint32_t)&bes2300_ins_patch0_testmode_2,
     (uint32_t)&bes2300_ins_patch1_testmode_2,
     (uint32_t)&bes2300_ins_patch2_testmode_2,
     (uint32_t)&bes2300_ins_patch3_testmode_2,
     (uint32_t)&bes2300_ins_patch4_testmode_2,
     (uint32_t)&bes2300_ins_patch5_testmode_2,    
-    
+    (uint32_t)&bes2300_ins_patch6_testmode_2,    
+    (uint32_t)&bes2300_ins_patch7_testmode_2,    
+    (uint32_t)&bes2300_ins_patch8_testmode_2,    
+    (uint32_t)&bes2300_ins_patch9_testmode_2,    
+    (uint32_t)&bes2300_ins_patch10_testmode_2,    
+    (uint32_t)&bes2300_ins_patch11_testmode_2,    
+    (uint32_t)&bes2300_ins_patch12_testmode_2,    
+    (uint32_t)&bes2300_ins_patch13_testmode_2,    
+    (uint32_t)&bes2300_ins_patch14_testmode_2,    
+    (uint32_t)&bes2300_ins_patch15_testmode_2,    
+    (uint32_t)&bes2300_ins_patch16_testmode_2,    
+    (uint32_t)&bes2300_ins_patch17_testmode_2,    
+    (uint32_t)&bes2300_ins_patch18_testmode_2,    
+    (uint32_t)&bes2300_ins_patch19_testmode_2,    
+    (uint32_t)&bes2300_ins_patch20_testmode_2,    
+    (uint32_t)&bes2300_ins_patch21_testmode_2,    
+    (uint32_t)&bes2300_ins_patch22_testmode_2,    
+    (uint32_t)&bes2300_ins_patch23_testmode_2,    
+    (uint32_t)&bes2300_ins_patch24_testmode_2,    
 };
 
 
@@ -2789,12 +3511,532 @@ const BTDRV_PATCH_STRUCT bes2300_ins_patch1_testmode_3 =
     NULL
 };//ble power level
 
-static const uint32_t ins_patch_2300_config_testmode_3[] =
+
+
+const uint32_t bes2300_patch2_ins_test_data_3[] =
+{   
+    0x30fcf8d4,
+    0xd0092b00,
+    0x680b4905,
+    0x3f00f413,
+    0x680bd004,
+    0x3300f423,
+    0xbf00600b,
+    0xb8c0f628,
+    0xd02200a4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch2_testmode_3 =
 {
     2,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch2_ins_test_data_3),    
+    0x0002e998,
+    0xbf32f1d7,
+    0xc0006800,
+    (uint8_t *)bes2300_patch2_ins_test_data_3
+};
+
+
+
+const uint32_t bes2300_patch3_ins_test_data_3[] =
+{   
+    0x30fcf8d4,
+    0xd00b2b00,
+    0xf003789b,
+    0x2b0503fd,
+    0x4b04d106,
+    0xf443681b,
+    0x4a023300,
+    0xbf006013,
+    0xbbcbf626,
+    0xd02200a4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch3_testmode_3 =
+{
+    3,
+    BTDRV_PATCH_INACT,
+    sizeof(bes2300_patch3_ins_test_data_3),    
+    0x0002cf08,
+    0xbc92f1d9,
+    0xc0006830,
+    (uint8_t *)bes2300_patch3_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch4_ins_test_data_3[] =
+{   
+    0xf0025bf2,
+    0xbf00080f,
+    0xba2bf623,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch4_testmode_3 =
+{
+    4,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch4_ins_test_data_3),    
+    0x00029cbc,
+    0xbdd0f1dc,
+    0xc0006860,
+    (uint8_t *)bes2300_patch4_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch5_ins_test_data_3[] =
+{   
+    0xf0025bf2,
+    0xbf00020f,
+    0xba49f623,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch5_testmode_3 =
+{
+    5,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch5_ins_test_data_3),    
+    0x00029d08,
+    0xbdb2f1dc,
+    0xc0006870,
+    (uint8_t *)bes2300_patch5_ins_test_data_3
+};
+
+
+
+const uint32_t bes2300_patch6_ins_test_data_3[] =
+{   
+    0xf0035bf3,
+    0xbf00080f,
+    0xba58f623,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch6_testmode_3 =
+{
+    6,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch6_ins_test_data_3),    
+    0x00029d38,
+    0xbda2f1dc,
+    0xc0006880,
+    (uint8_t *)bes2300_patch6_ins_test_data_3
+};
+
+
+
+const uint32_t bes2300_patch7_ins_test_data_3[] =
+{   
+    0xf0035bf3,
+    0xbf00010f,
+    0xba78f623,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch7_testmode_3 =
+{
+    7,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch7_ins_test_data_3),    
+    0x00029d88,
+    0xbd82f1dc,
+    0xc0006890,
+    (uint8_t *)bes2300_patch7_ins_test_data_3
+};
+
+
+#ifdef __POWER_CONTROL_TYPE_1__
+
+const uint32_t bes2300_patch8_ins_test_data_3[] =
+{
+    0xf0135243,
+    0x2b00030f,
+    0x2000bf14,
+    0x47702001,
+};
+
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch8_testmode_3 =
+{
+    8,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch8_ins_test_data_3),
+    0x00003498,
+    0xba50f203,
+    0xc000693c,
+    (uint8_t *)bes2300_patch8_ins_test_data_3
+};//pwr controll
+#else
+const BTDRV_PATCH_STRUCT bes2300_ins_patch8_testmode_3 =
+{
+    8,
+    BTDRV_PATCH_ACT,
+    0,
+    0x000034d0,
+    0xe0072200,
+    0,
+    NULL
+};
+
+#endif
+
+
+/////for test mode power control
+const BTDRV_PATCH_STRUCT bes2300_ins_patch9_testmode_3 =
+{
+    9,
+    BTDRV_PATCH_ACT,
+    0,
+    0x00029aa8,
+    0xe0cfbf00,
+    0,
+    NULL
+};
+
+const uint32_t bes2300_patch10_ins_test_data_3[] =
+{
+    0xb2db1e6b,
+    0xd8282b01,
+    0x30fcf8db,
+    0xf002789a,
+    0x2a0502fd,
+    0x4912d121,
+    0x3201680a,
+    0x4a11600a,
+    0x8000f8c2,
+    0xf3c29a05,
+    0x490f02c9,
+    0x490f600a,
+    0x8c18600d,
+    0x4050f100,
+    0x1004f500,
+    0xf8934b0c,
+    0xebc331cb,
+    0x490b03c3,
+    0x1013f831,
+    0xf101b289,
+    0xf5014150,
+    0xf6411104,
+    0xf626f91d,
+    0xbf00bf78,
+    0xc0006a38,
+    0xc0006a3c,
+    0xc0006a40,
+    0xc0006a44,
+    0xc0005c90,
+    0xd02115a0,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch10_testmode_3 =
+{
+    10,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch10_ins_test_data_3),
+    0x0002d904,
+    0xb85cf1d9,
+    0xc00069c0,
+    (uint8_t *)bes2300_patch10_ins_test_data_3
+};
+
+const uint32_t bes2300_patch11_ins_test_data_3[] =
+{
+    0xbf00789a,
+    0xb2d23a05,
+    0xd9002a03,
+    0x2a00e040,
+    0x2a02d001,
+    0xbf00d13e,
+    0x681b4b1f,
+    0xd0392b00,
+    0xeb04bf00,
+    0xf8370484,
+    0xb29b3014,
+    0x0378f023,
+    0x88124a1a,
+    0x03c2ea43,
+    0xf827b29b,
+    0x4b193014,
+    0xf043681b,
+    0x4a160304,
+    0xea438812,
+    0xb29b03c2,
+    0x3014f82a,
+    0x30fcf8d5,
+    0x4a138c1b,
+    0x3014f822,
+    0x3014f836,
+    0x030ef3c3,
+    0x3014f826,
+    0x30c2f895,
+    0xf383fab3,
+    0xf885095b,
+    0xf89530c2,
+    0x330130c3,
+    0x30c3f885,
+    0x68134a04,
+    0x60133b01,
+    0xb986f626,
+    0xb816f626,
+    0xb987f626,
+    0xc0006a38,
+    0xc0006a3c,
+    0xc0006a40,
+    0xc0006a44,
+    0xd02115d4,
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch11_testmode_3 =
+{
+    11,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch11_ins_test_data_3),
+    0x0002cb0c,
+    0xbfa4f1d9,
+    0xc0006a58,
+    (uint8_t *)bes2300_patch11_ins_test_data_3
+};
+/////end for test mode power control
+
+
+
+const uint32_t bes2300_patch12_ins_test_data_3[] =
+{   
+    0x20014b04,
+    0x4b026018,
+    0xbf00689b,
+    0xb958f611,
+    0xc0004168,
+    0xc00068b8,
+    0x00000000
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch12_testmode_3 =
+{
+    12,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch12_ins_test_data_3),    
+    0x00017b5c,
+    0xbea0f1ee,
+    0xc00068a0,
+    (uint8_t *)bes2300_patch12_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch13_ins_test_data_3[] =
+{   
+    0x20024b04,
+    0x4b026018,
+    0xbf00689b,
+    0xbaecf612,
+    0xc0004168,
+    0xc00068b8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch13_testmode_3 =
+{
+    13,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch13_ins_test_data_3),    
+    0x00018ea4,
+    0xbd0cf1ed,
+    0xc00068c0,
+    (uint8_t *)bes2300_patch13_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch14_ins_test_data_3[] =
+{   
+    0x20014b04,
+    0x4b026018,
+    0xbf0068db,
+    0xb964f611,
+    0xc0004168,
+    0xc00068b8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch14_testmode_3 =
+{
+    14,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch14_ins_test_data_3),    
+    0x00017bb4,
+    0xbe94f1ee,
+    0xc00068e0,
+    (uint8_t *)bes2300_patch14_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch15_ins_test_data_3[] =
+{   
+    0x20024b04,
+    0x4b026018,
+    0x462068db,
+    0xbad6f612,
+    0xc0004168,
+    0xc00068b8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch15_testmode_3 =
+{
+    15,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch15_ins_test_data_3),    
+    0x00018eb8,
+    0xbd22f1ed,
+    0xc0006900,
+    (uint8_t *)bes2300_patch15_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch16_ins_test_data_3[] =
+{   
+    0xd91b429a,
+    0x5a42b410,
+    0xb2dc3301,
+    0x427ff402,
+    0x52424322,
+    0x68104a0c,
+    0xd00a2801,
+    0xf8924a0b,
+    0x42830030,
+    0x2000bf14,
+    0x4a072001,
+    0x60112100,
+    0x2000e001,
+    0xf85d6010,
+    0x47704b04,
+    0x20004b02,
+    0x20016018,
+    0xbf004770,
+    0xc00068b8,
+    0xc0004168,
+
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch16_testmode_3 =
+{
+    16,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch16_ins_test_data_3),    
+    0x000034bc,
+    0xba40f203,
+    0xc0006940,
+    (uint8_t *)bes2300_patch16_ins_test_data_3
+};
+
+
+
+const uint32_t bes2300_patch17_ins_test_data_3[] =
+{   
+    0xf0135a43,     
+    0xd016030f,
+    0x3b015a42,     
+    0xf402b2db,     
+    0x4313427f,
+    0xf0135243,     
+    0x4a08030f,
+    0x28016810,     
+    0x2b00d006,     
+    0x2000bf14,     
+    0x21002001,     
+    0xe0016011,     
+    0x60102000,     
+    0x20014770,     
+    0xbf004770,     
+    0xc00068b8,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch17_testmode_3 =
+{
+    17,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch17_ins_test_data_3),    
+    0x00003484,
+    0xbb44f203,
+    0xc0006b10,
+    (uint8_t *)bes2300_patch17_ins_test_data_3
+};
+
+
+const uint32_t bes2300_patch18_ins_test_data_3[] =
+{   
+    0x60b39b01,     
+    0xfb00206e,     
+    0x4a0bf004,
+    0xf0436813,     
+    0x60130302,
+    0x4b092202,     
+    0xf5a3601a,     
+    0x3bb6436e,
+    0x3003f830,
+    0x030cf3c3,
+    0x5300f443,
+    0xf8204a04,     
+    0xbf003002,
+    0xbeaaf625,
+    0xD022000C,
+    0xd0220018,
+    0xd0211162,
+
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch18_testmode_3 =
+{
+    18,
+    BTDRV_PATCH_ACT,
+    sizeof(bes2300_patch18_ins_test_data_3),    
+    0x0002c8e8,
+    0xb93af1da,
+    0xc0006b60,
+    (uint8_t *)bes2300_patch18_ins_test_data_3
+};
+
+const BTDRV_PATCH_STRUCT bes2300_ins_patch19_testmode_3 =
+{
+    19,
+    BTDRV_PATCH_ACT,
+    0,
+    0x00038180,
+    0xf7c92100,
+    0,
+    NULL,
+};
+
+
+
+static const uint32_t ins_patch_2300_config_testmode_3[] =
+{
+    20,
     (uint32_t)&bes2300_ins_patch0_testmode_3,
     (uint32_t)&bes2300_ins_patch1_testmode_3,
-    
+    (uint32_t)&bes2300_ins_patch2_testmode_3,
+    (uint32_t)&bes2300_ins_patch3_testmode_3,
+    (uint32_t)&bes2300_ins_patch4_testmode_3,
+    (uint32_t)&bes2300_ins_patch5_testmode_3,
+    (uint32_t)&bes2300_ins_patch6_testmode_3,
+    (uint32_t)&bes2300_ins_patch7_testmode_3,
+    (uint32_t)&bes2300_ins_patch8_testmode_3,
+    (uint32_t)&bes2300_ins_patch9_testmode_3,
+    (uint32_t)&bes2300_ins_patch10_testmode_3,
+    (uint32_t)&bes2300_ins_patch11_testmode_3,
+    (uint32_t)&bes2300_ins_patch12_testmode_3,
+    (uint32_t)&bes2300_ins_patch13_testmode_3,
+    (uint32_t)&bes2300_ins_patch14_testmode_3,
+    (uint32_t)&bes2300_ins_patch15_testmode_3,
+    (uint32_t)&bes2300_ins_patch16_testmode_3,
+    (uint32_t)&bes2300_ins_patch17_testmode_3,
+    (uint32_t)&bes2300_ins_patch18_testmode_3,
+    (uint32_t)&bes2300_ins_patch19_testmode_3,
 };
 
 
@@ -2804,8 +4046,15 @@ void btdrv_ins_patch_test_init(void)
     const BTDRV_PATCH_STRUCT *ins_patch_p;
 
     btdrv_patch_en(0);
+
+    for(uint8_t i=0;i<56;i++)
+    {
+        btdrv_ins_patch_disable(i);    
+    }  
+    
     if(hal_get_chip_metal_id() > HAL_CHIP_METAL_ID_1 && hal_get_chip_metal_id() <= HAL_CHIP_METAL_ID_4)
     {
+
         for(uint8_t i=0;i<ins_patch_2300_config_testmode[0];i++)
         {
             ins_patch_p = (BTDRV_PATCH_STRUCT *)ins_patch_2300_config_testmode[i+1];

@@ -15,7 +15,7 @@ mmlib_obj += fm/
 endif
 
 ifeq ($(OPUS_CODEC),1)
-mmlib_obj += audio/codec/opus121/src/
+mmlib_obj += opus121/src/
 endif
 
 ifeq ($(A2DP_AAC_ON),1)

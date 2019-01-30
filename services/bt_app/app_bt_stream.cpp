@@ -86,6 +86,8 @@
 #include "audio_eq.h"
 #endif
 
+#include "ble_tws.h"
+
 extern uint8_t bt_audio_updata_eq_for_anc(uint8_t anc_status);
 
 #include "app_bt_media_manager.h"
@@ -656,7 +658,7 @@ SRAM_TEXT_LOC void single_pll_adjust_monitor_action(uint8_t shift_dirction)
 }
 
 #endif
-
+extern btif_remote_device_t* mobileBtRemDev;
 uint32_t tws_audout_pcm_more_data(uint8_t * buf, uint32_t len)
 {
 #if VOICE_DATAPATH
@@ -814,11 +816,19 @@ uint32_t tws_audout_pcm_more_data(uint8_t * buf, uint32_t len)
 
 #ifdef BT_XTAL_SYNC
 #ifdef BT_XTAL_SYNC_NEW_METHOD
+        uint32_t bitoffset = 0;
         if(TWS_SLAVE_CONN_MASTER == app_tws_get_conn_state())
         {
-            uint32_t bitoffset = btdrv_rf_bitoffset_get(btdrv_conhdl_to_linkid(app_tws_get_tws_conhdl()));
-            bt_xtal_sync_new(bitoffset);
+            bitoffset = btdrv_rf_bitoffset_get(btdrv_conhdl_to_linkid(app_tws_get_tws_conhdl()));
+            bt_xtal_sync_new(bitoffset,BT_XTAL_SYNC_MODE_WITH_TWS);
         }
+#ifdef __MASTER_FOLLOW_MOBILE__
+        else if(TWS_MASTER_CONN_SLAVE == app_tws_get_conn_state())
+        {
+            bitoffset = btdrv_rf_bitoffset_get(btdrv_conhdl_to_linkid(btif_me_get_remote_device_hci_handle(mobileBtRemDev)));
+            bt_xtal_sync_new(bitoffset,BT_XTAL_SYNC_MODE_WITH_MOBILE);
+        }
+#endif
 #else
         bt_xtal_sync(BT_XTAL_SYNC_MODE_MUSIC);
 #endif
@@ -2678,7 +2688,7 @@ FRAM_TEXT_LOC static uint32_t bt_sco_codec_playback_data(uint8_t *buf, uint32_t 
         {
             uint32_t bitoffset = bt_drv_reg_op_get_bitoffset( btif_me_get_remote_device_hci_handle(masterBtRemDev));
             //LOG_PRINT_BT_STREAM("xtal_sync: rxbit=%d",rxbit);
-            bt_xtal_sync_new(bitoffset);
+            bt_xtal_sync_new(bitoffset,BT_XTAL_SYNC_MODE_WITH_TWS);
         }
 #else
         bt_xtal_sync(BT_XTAL_SYNC_MODE_VOICE);
@@ -3076,9 +3086,10 @@ int bt_sco_player(bool on, enum APP_SYSFREQ_FREQ_T freq,uint32_t trigger_ticks)
         return 0;
 
     if (on){
-        //bt_syncerr set to max(0x0a)
-//        BTDIGITAL_REG_SET_FIELD(REG_BTCORE_BASE_ADDR, 0x0f, 0, 0x0f);
-//        af_set_priority(osPriorityRealtime);
+#ifdef IAG_BLE_INCLUDE    
+        ble_tws_stop_all_activities();
+#endif
+
         af_set_priority(osPriorityHigh);
         app_audio_manager_sco_status_checker();
 #ifdef  __3RETX_SNIFF__   
@@ -3155,12 +3166,7 @@ int bt_sco_player(bool on, enum APP_SYSFREQ_FREQ_T freq,uint32_t trigger_ticks)
         app_hfp_clear_ctrl_buffer();
 #endif
 
-// Note: SPEECH_TX_2MIC_NS2 do not need process
-#if defined(SPEECH_TX_2MIC_NS)
-        sample_rate = AUD_SAMPRATE_16000;
-#else
         sample_rate = speech_codec_get_sample_rate();
-#endif
 
     sco_cap_chan_num = (enum AUD_CHANNEL_NUM_T)SPEECH_CODEC_CAPTURE_CHANNEL_NUM;
 
@@ -3660,7 +3666,9 @@ int app_bt_stream_open(APP_AUDIO_STATUS* status)
     }
 
     if (!nRet)
-        gStreamplayer = player;
+    {
+        gStreamplayer |= player;
+    }
 
     return nRet;
 }
@@ -3669,10 +3677,11 @@ int app_bt_stream_close(uint16_t player)
 {
     int nRet = -1;
     LOG_PRINT_BT_STREAM("app_bt_stream_close prev:%d cur:%d", gStreamplayer, player);
-//  osDelay(1);
 
-    if (gStreamplayer != player)
+    if ((gStreamplayer & player) != player)
+    {
         return -1;
+    }
 
     switch (player) {
         case APP_BT_STREAM_HFP_PCM:
@@ -3716,7 +3725,9 @@ int app_bt_stream_close(uint16_t player)
             break;
     }
     if (!nRet)
-        gStreamplayer = APP_BT_STREAM_INVALID;
+    {
+        gStreamplayer &= (~player);
+    }
     return nRet;
 }
 
@@ -3766,8 +3777,10 @@ int app_bt_stream_restart(APP_AUDIO_STATUS* status)
 
     LOG_PRINT_BT_STREAM("app_bt_stream_restart prev:%d cur:%d freq:%d", gStreamplayer, player, freq);
 
-    if (gStreamplayer != player)
+    if ((gStreamplayer & player) != player)
+    {
         return -1;
+    }
 
     switch (player) {
         case APP_BT_STREAM_HFP_PCM:
@@ -3932,10 +3945,19 @@ void app_bt_stream_hfpvolume_reset(void)
      btdevice_volume_p->hfp_vol = NVRAM_ENV_STREAM_VOLUME_HFP_VOL_DEFAULT;
 }
 
+#ifdef __TWS_ROLE_SWITCH__
+extern"C" bool app_tws_is_role_switching_on(void);
+#endif
 void app_bt_stream_volume_ptr_update(uint8_t *bdAddr)
 {
     static struct btdevice_volume stream_volume = {NVRAM_ENV_STREAM_VOLUME_A2DP_VOL_DEFAULT,NVRAM_ENV_STREAM_VOLUME_HFP_VOL_DEFAULT};
-
+#ifdef __TWS_ROLE_SWITCH__
+    if(app_tws_is_role_switching_on())
+    {
+        TRACE("app_bt_stream_volume_ptr_update");
+        return ;
+    }
+#endif
 #ifndef FPGA
     nvrec_btdevicerecord *record = NULL;
     if (!nv_record_btdevicerecord_find((bt_bdaddr_t*)bdAddr,&record)){

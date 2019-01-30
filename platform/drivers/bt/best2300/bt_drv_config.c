@@ -131,9 +131,9 @@ const int8_t btdrv_rf_env_2300_t6[]=
   185,     //rf length
   0x2,     //txpwr_max
   #ifdef __HW_AGC__
-    53,    ///rssi high thr 0dBm
-  -45,   //rssi low thr -90dBm
-  -25,  //rssi interf thr -70dBm
+    0,    ///rssi high thr 0dBm
+  -90,   //rssi low thr -90dBm
+  -70,  //rssi interf thr -70dBm
   #else
     0,    ///rssi high thr
   -90,   //rssi low thr

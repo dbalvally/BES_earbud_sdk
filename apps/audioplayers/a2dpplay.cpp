@@ -966,6 +966,19 @@ int a2dp_audio_init(void)
     return 0;
 }
 
+#ifdef _AMA_
+void a2dp_clean_sbc_queue(void)
+{
+	if (APP_AUDIO_LengthOfCQueue(&sbc_queue) > 0)
+	{
+		LOCK_APP_AUDIO_QUEUE();
+		APP_AUDIO_DeCQueue(&sbc_queue,0,APP_AUDIO_LengthOfCQueue(&sbc_queue));
+		UNLOCK_APP_AUDIO_QUEUE();
+	}
+    a2dp_cache_status = APP_AUDIO_CACHE_CACHEING;
+}
+#endif
+
 int a2dp_audio_deinit(void)
 {
 #if defined(__AUDIO_RESAMPLE__) && defined(SW_PLAYBACK_RESAMPLE)

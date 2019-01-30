@@ -15,15 +15,16 @@
  ****************************************************************************/
 #include "plat_types.h"
 #include "plat_addr_map.h"
+#include "cmsis.h"
 #include "hal_cache.h"
 #include "hal_location.h"
-#if defined(CHIP_BEST2300) || defined(CHIP_BEST1400)
 #include "hal_norflash.h"
 #include "hal_timer.h"
-#endif
+
+#define HAL_CACHE_YES                       1
+#define HAL_CACHE_NO                        0
 
 /* cache controller */
-
 #if 0
 #elif defined(CHIP_BEST1000)
 #define CACHE_SIZE                          0x1000
@@ -149,7 +150,7 @@ static inline uint32_t _cache_get_reg_base(enum HAL_CACHE_ID_T id)
 
     return base;
 }
-uint8_t BOOT_TEXT_FLASH_LOC hal_cache_enable(enum HAL_CACHE_ID_T id, uint32_t val)
+uint8_t BOOT_TEXT_FLASH_LOC hal_cache_enable(enum HAL_CACHE_ID_T id)
 {
     uint32_t reg_base = 0;
 
@@ -160,44 +161,86 @@ uint8_t BOOT_TEXT_FLASH_LOC hal_cache_enable(enum HAL_CACHE_ID_T id, uint32_t va
 #endif
 
     reg_base = _cache_get_reg_base(id);
-
     if (reg_base == 0) {
         return 0;
     }
 
-    if (val) {
-        cacheip_init_cache(reg_base);
-    }
+    cacheip_init_cache(reg_base);
+    cacheip_enable_cache(reg_base, HAL_CACHE_YES);
 
-    cacheip_enable_cache(reg_base, val);
     return 0;
 }
-uint8_t BOOT_TEXT_FLASH_LOC hal_cache_writebuffer_enable(enum HAL_CACHE_ID_T id, uint32_t val)
+uint8_t SRAM_TEXT_LOC hal_cache_disable(enum HAL_CACHE_ID_T id)
 {
     uint32_t reg_base = 0;
-    reg_base = _cache_get_reg_base(id);
 
+#ifndef DCACHE_CTRL_BASE
+    if (id == HAL_CACHE_ID_D_CACHE) {
+        return 0;
+    }
+#endif
+
+    reg_base = _cache_get_reg_base(id);
     if (reg_base == 0) {
         return 0;
     }
 
-    cacheip_enable_writebuffer(reg_base, val);
+#if !(defined(ROM_BUILD) || defined(PROGRAMMER))
+    uint32_t time;
+
+    time = hal_sys_timer_get();
+    while (hal_norflash_busy() && (hal_sys_timer_get() - time) < MS_TO_TICKS(2));
+    // Delay for at least 8 cycles till the cache becomes idle
+    for (int delay = 0; delay < 8; delay++) {
+        asm volatile("nop");
+    }
+#endif
+
+    cacheip_enable_cache(reg_base, HAL_CACHE_NO);
+
+    return 0;
+}
+uint8_t BOOT_TEXT_FLASH_LOC hal_cache_writebuffer_enable(enum HAL_CACHE_ID_T id)
+{
+    uint32_t reg_base = 0;
+
+    reg_base = _cache_get_reg_base(id);
+    if (reg_base == 0) {
+        return 0;
+    }
+
+    cacheip_enable_writebuffer(reg_base, HAL_CACHE_YES);
+
+    return 0;
+}
+uint8_t hal_cache_writebuffer_disable(enum HAL_CACHE_ID_T id)
+{
+    uint32_t reg_base = 0;
+
+    reg_base = _cache_get_reg_base(id);
+    if (reg_base == 0) {
+        return 0;
+    }
+
+    cacheip_enable_writebuffer(reg_base, HAL_CACHE_NO);
+
     return 0;
 }
 uint8_t hal_cache_writebuffer_flush(enum HAL_CACHE_ID_T id)
 {
     uint32_t reg_base = 0;
-    reg_base = _cache_get_reg_base(id);
 
+    reg_base = _cache_get_reg_base(id);
     if (reg_base == 0) {
         return 0;
     }
 
     cacheip_flush_writebuffer(reg_base);
+
     return 0;
 }
 // Wrap is enabled during flash init
-uint8_t BOOT_TEXT_SRAM_LOC hal_cache_wrap_enable(enum HAL_CACHE_ID_T id, uint32_t val)
+uint8_t BOOT_TEXT_SRAM_LOC hal_cache_wrap_enable(enum HAL_CACHE_ID_T id)
 {
     uint32_t reg_base = 0;
 
@@ -208,12 +251,31 @@ uint8_t BOOT_TEXT_SRAM_LOC hal_cache_wrap_enable(enum HAL_CACHE_ID_T id, uint32_
 #endif
 
     reg_base = _cache_get_reg_base(id);
-
     if (reg_base == 0) {
         return 0;
     }
 
-    cacheip_enable_wrap(reg_base, val);
+    cacheip_enable_wrap(reg_base, HAL_CACHE_YES);
+
+    return 0;
+}
+uint8_t hal_cache_wrap_disable(enum HAL_CACHE_ID_T id)
+{
+    uint32_t reg_base = 0;
+
+#ifndef DCACHE_CTRL_BASE
+    if (id == HAL_CACHE_ID_D_CACHE) {
+        return 0;
+    }
+#endif
+
+    reg_base = _cache_get_reg_base(id);
+    if (reg_base == 0) {
+        return 0;
+    }
+
+    cacheip_enable_wrap(reg_base, HAL_CACHE_NO);
+
     return 0;
 }
 // Flash timing calibration might need to invalidate cache
@@ -221,12 +283,14 @@ uint8_t BOOT_TEXT_SRAM_LOC hal_cache_invalidate(enum HAL_CACHE_ID_T id, uint32_t
 {
     uint32_t reg_base;
     uint32_t end_address;
+    uint32_t lock;
 
     reg_base = _cache_get_reg_base(id);
-
     if (reg_base == 0) {
         return 0;
     }
+
+    lock = int_lock_global();
 
 #if defined(CHIP_BEST2300) || defined(CHIP_BEST1400)
     uint32_t time;
@@ -241,15 +305,16 @@ uint8_t BOOT_TEXT_SRAM_LOC hal_cache_invalidate(enum HAL_CACHE_ID_T id, uint32_t
 
     if (len >= CACHE_SIZE / 2) {
         cacheip_init_cache(reg_base);
-        return 0;
+    } else {
+        end_address = start_address + len;
+        while (start_address < end_address) {
+            cacheip_set_invalidate_address(reg_base, start_address);
+            cacheip_trigger_invalidate(reg_base);
+            start_address += CACHE_LINE_SIZE;
+        }
     }
 
-    end_address = start_address + len;
-    while (start_address < end_address) {
-        cacheip_set_invalidate_address(reg_base, start_address);
-        cacheip_trigger_invalidate(reg_base);
-        start_address += CACHE_LINE_SIZE;
-    }
+    int_unlock_global(lock);
 
     return 0;
 }

@@ -111,7 +111,7 @@ void hal_sensor_hub_reg_timer_stop(void)
 void hal_sensor_hub_reg_timer_open(uint32_t tick)
 {
     hal_sensorhub_timer->timer[0].Control = TIMER_CTRL_MODE_PERIODIC | TIMER_CTRL_INTEN;
-    hal_sensorhub_timer->timer[0].Load = 32000*3;
+    hal_sensorhub_timer->timer[0].Load = tick;
 }
 
 void hal_sensor_hub_reg_timer_start(void)
@@ -157,6 +157,8 @@ int hal_sensor_hub_open(struct HAL_SENSOR_HUB_CFG_T *cfg)
     sensor_hub[0]->GLOBAL_CFG0_REG = (cfg->type == HAL_SENSOR_HUB_TRIGGER_TYPE_PERIODIC_TIMER?(0<<0):(1<<0)) |
                                       (cfg->i2c_cfg.i2c_id == HAL_I2C_ID_0?(0<<2):(1<<2))|
                                       (1<<3);
+
+    sensor_hub[0]->GLOBAL_CFG2_REG = hal_i2c_sh_get_i2c_base_addr(cfg->i2c_cfg.i2c_id);
 
     if (cfg->type == HAL_SENSOR_HUB_TRIGGER_TYPE_PERIODIC_TIMER){
         hal_sensor_hub_reg_timer_open(MS_TO_TICKS(cfg->timer_interval));

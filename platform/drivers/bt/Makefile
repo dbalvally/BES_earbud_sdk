@@ -34,3 +34,7 @@ ifeq ($(INTERSYS_NO_THREAD),1)
 BT_DRV_CONFIG_FLAGS += -D_INTERSYS_NO_THREAD_
 endif
 
+VCO_TEST_TOOL ?= 1
+ifeq ($(VCO_TEST_TOOL),1)
+subdir-ccflags-y += -DVCO_TEST_TOOL
+endif

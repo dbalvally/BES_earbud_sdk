@@ -2082,6 +2082,18 @@ uint32_t hal_i2c_sh_get_dma_config(enum HAL_I2C_ID_T id, struct HAL_I2C_SENSOR_H
     
     return 0;
 }
+
+uint32_t hal_i2c_sh_get_i2c_base_addr(enum HAL_I2C_ID_T id)
+{
+    uint32_t reg_base;
+
+    ASSERT(id < HAL_I2C_ID_NUM, invalid_id, id);
+
+    reg_base = _i2c_get_base(id);
+
+    return reg_base;
+}
+
 /* sensor hub end */
 
 /* gpio iic mode */

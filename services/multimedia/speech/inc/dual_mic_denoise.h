@@ -43,7 +43,7 @@ typedef struct {
  * @param      alloc_ext  The allocate extent RAM
  * @param      cfg        The configuration set parameter
  */
-void dual_mic_denoise_init(void* (* alloc_ext)(int), const DUAL_MIC_DENOISE_CFG_T *cfg);
+void dual_mic_denoise_init(int32_t sample_rate, int32_t frame_size, const DUAL_MIC_DENOISE_CFG_T *cfg, void* (* alloc_ext)(int));
 
 /**
  * @brief      Run

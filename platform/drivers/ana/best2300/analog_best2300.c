@@ -663,6 +663,10 @@ static OPT_TYPE uint16_t vcodec_mv =
     1700;
 #endif
 
+#ifdef ANC_PROD_TEST
+static bool debug_vad_mic_en = false;
+#endif
+
 static bool ana_spk_req;
 static bool ana_spk_muted;
 static bool ana_spk_enabled;
@@ -1616,7 +1620,17 @@ void analog_open(void)
     } else {
         vcm = vcm_lpf = 7;
     }
+    bool vad_mic;
+#ifdef ANC_PROD_TEST
+    vad_mic = debug_vad_mic_en;
+#else
     if (AUD_CHANNEL_MAP_CH4 & ( cfg_audio_input_path_cfg[AUD_INPUT_PATH_MAINMIC].input_path_cfg  | CFG_HW_AUD_INPUT_PATH_LINEIN_DEV)) {
+        vad_mic = true;
+    } else {
+        vad_mic = false;
+    }
+#endif
+    if (vad_mic) {
         vcm_lpf = 1;
     }
     val = REG_CODEC_VCM_LOW_VCM(vcm) | REG_CODEC_VCM_LOW_VCM_LP(vcm) | REG_CODEC_VCM_LOW_VCM_LPF(vcm_lpf);
@@ -1881,6 +1895,14 @@ int analog_debug_config_codec(uint16_t mv)
 
 int analog_debug_config_low_power_adc(bool enable)
 {
+    return 0;
+}
+
+int analog_debug_config_vad_mic(bool enable)
+{
+#ifdef ANC_PROD_TEST
+    debug_vad_mic_en = enable;
+#endif
     return 0;
 }
 

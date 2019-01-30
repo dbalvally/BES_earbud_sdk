@@ -19,36 +19,28 @@
 #include "iirfilt.h"
 
 // use more frame_size * sizeof(float) ram
+#ifndef _MSC_VER
 #define EQ_USE_CMSIS_IIR
+#endif
 
 #define MAX_VQE_EQ_BAND 6
 
 typedef struct
 {
     enum IIR_BIQUARD_TYPE type;
-    float f0;
-    float gain;
-    float q;
-} BiquardParamDesign;
-
-typedef struct
-{
-    enum IIR_BIQUARD_TYPE type;
-    float a1;
-    float a2;
-    float b0;
-    float b1;
-    float b2;
-} BiquardParamRaw;
-
-typedef struct
-{
-	enum IIR_BIQUARD_TYPE type;
-	float v0;
-    float v1;
-    float v2;
-    float v3;
-    float v4;
+    union
+    {
+        /* Raw config, used when type is IIR_BIQUARD_RAW */
+        struct
+        {
+            float a1; float a2; float b0; float b1; float b2;
+        } raw;
+        /* Generate coeffs using user defined params, used in other type */
+        struct
+        {
+            float f0; float gain; float q;
+        } design;
+    };
 } BiquardParam;
 
 typedef struct
@@ -72,6 +64,8 @@ int32_t eq_destroy(EqState *st);
 int32_t eq_set_config(EqState *st, const EqConfig *cfg);
 
 int32_t eq_process(EqState *st, int16_t *pcm_buf, int32_t pcm_len);
+
+int32_t eq_process2(EqState *st, int16_t *pcm_buf, int32_t pcm_len, int32_t stride);
 
 #ifdef __cplusplus
 }

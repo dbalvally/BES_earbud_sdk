@@ -27,7 +27,7 @@
 #endif
 
 #if defined(CHIP_BEST2000)
-#define FAST_XRAM_SECTION_SIZE		0xe000
+#define FAST_XRAM_SECTION_SIZE		0xF000
 #else
 #if (RAM_SIZE >= 0x40000)
 #if defined(BTUSB_AUDIO_MODE)
@@ -165,7 +165,20 @@ SECTIONS
 		*(.boot_rodata*)
 		. = ALIGN(4);
 	} > FLASHX
-
+	
+		.firmware_rev (ALIGN(64)) :
+	{
+		*(.fw_rev)
+		. = ALIGN(4);
+		
+	} > FLASHX
+	
+	.ota_upgrade_log (ALIGN(4096)):
+	{
+		*(.ota_upgrade_log)
+		. = (0x1000);
+	} > FLASHX
+	
 	.vector_table (ORIGIN(RAM)) (NOLOAD) :
 	{
 		KEEP(*(.vector_table))
@@ -187,7 +200,7 @@ SECTIONS
 		__userdata_pool_end__ = .;
 	} > RAM
 
-	__boot_sram_start_flash__ = LOADADDR(.boot_text_flash) + SIZEOF(.boot_text_flash);
+	__boot_sram_start_flash__ = LOADADDR(.boot_text_flash) + SIZEOF(.boot_text_flash)+ 0x1000+ SIZEOF(.ota_upgrade_log);
 	__boot_sram_start__ = __userdata_pool_end__;
 	.boot_text_sram (RAM_TO_RAMX(__boot_sram_start__)) : AT (__boot_sram_start_flash__)
 	{
@@ -1063,26 +1076,19 @@ SECTIONS
 
 	.custom.cmd.table (.) :
 	{
-	. = ALIGN(4);
-	__custom_handler_table_start = .;
-		KEEP(*(.custom_handler_table))		
-	__custom_handler_table_end = .;	
+		. = ALIGN(4);
+		__custom_handler_table_start = .;
+		KEEP(*(.custom_handler_table))
+		__custom_handler_table_end = .;
 	} > FLASH
 	
 	.tws.cmd.table (.) :
 	{
-	. = ALIGN(4);
-	__tws_custom_handler_table_start = .;
-		KEEP(*(.tws_custom_handler_table))		
-	__tws_custom_handler_table_end = .;	
+		. = ALIGN(4);
+		__tws_custom_handler_table_start = .;
+		KEEP(*(.tws_custom_handler_table))
+		__tws_custom_handler_table_end = .;
 	} > FLASH
-
-#if defined(FIRMWARE_REV)
-	.firmware_rev (ALIGN(64)):
-	{
-		*(.fw_rev)
-	} > FLASH
-#endif
 
 	/* To copy multiple FLASH to RAM sections,
 	 * uncomment .copy.table section and,

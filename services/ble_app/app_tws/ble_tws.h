@@ -311,6 +311,8 @@ void ble_tws_config_init_done_callback(ble_tws_initialized_callback cb);
 
 #ifdef __TWS_PAIR_DIRECTLY__
 extern bool slaveDisconMobileFlag;
+extern bool slaveInReconMasterFlag;
+
 bool app_is_ble_adv_allowed_without_chargerbox(void);
 void app_tws_start_normal_ble_activities_without_chargerbox(void);
 void app_start_ble_tws_connecting(void);
@@ -327,6 +329,8 @@ void app_tws_connected_evt_handler(uint8_t conidx);
 bool is_ble_stack_initialized(void);
 void app_tws_stop_ble_handshake_supervising(void);
 bool app_tws_is_connecting_ble(void);
+
+void app_start_connectable_ble_adv(uint16_t adv_interval_in_ms);
 
 #ifdef __cplusplus
 	}

@@ -140,6 +140,12 @@ bool app_bt_is_device_connected(uint8_t deviceId);
 
 bool app_bt_get_device_bdaddr(uint8_t deviceId, uint8_t* btAddr);
 
+void hfp_service_connected_set(bool on);
+bool app_is_hfp_service_connected(void);
+void a2dp_service_connected_set(bool on);
+bool a2dp_service_is_connected(void);
+bool app_is_link_connected();bool btapp_hfp_is_sco_active(void);
+bool btapp_is_bt_active(void);
 
 #ifdef __cplusplus
 }

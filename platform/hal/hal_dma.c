@@ -98,8 +98,8 @@ static const uint32_t audma_fifo_addr[AUDMA_PERIPH_NUM] = {
     UART0_BASE + 0x00,      // UART0 TX
     UART1_BASE + 0x00,      // UART1 RX
     UART1_BASE + 0x00,      // UART1 TX
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     UART2_BASE + 0x00,      // UART2 RX
     UART2_BASE + 0x00,      // UART2 TX
 #ifdef BTDUMP_ENABLE
@@ -164,8 +164,8 @@ static const uint32_t audma_fifo_addr[AUDMA_PERIPH_NUM] = {
     UART0_BASE + 0x00,      // UART0 TX
     UART1_BASE + 0x00,      // UART1 RX
     UART1_BASE + 0x00,      // UART1 TX
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     SPI_BASE + 0x008,       // SPI RX
     SPI_BASE + 0x008,       // SPI TX
     SPDIF0_BASE+ 0x1c0,     // SPDIF0 RX
@@ -269,8 +269,8 @@ static const enum HAL_DMA_PERIPH_T audma_fifo_periph[AUDMA_PERIPH_NUM] = {
 static const uint32_t gpdma_fifo_addr[GPDMA_PERIPH_NUM] = {
     FLASH_CTRL_BASE + 0x008, // FLASH CTRL
     SDMMC_BASE + 0x200,     // SDMMC
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     SPI_BASE + 0x008,       // SPI RX
     SPI_BASE + 0x008,       // SPI TX
     SPILCD_BASE + 0x008,    // SPILCD RX
@@ -279,8 +279,8 @@ static const uint32_t gpdma_fifo_addr[GPDMA_PERIPH_NUM] = {
     UART0_BASE + 0x000,     // UART0 TX
     UART1_BASE + 0x000,     // UART1 RX
     UART1_BASE + 0x000,     // UART1 TX
-    ISPI_BASE + 0x008,      // ISPI TX
-    ISPI_BASE + 0x008,      // ISPI RX
+    I2C1_BASE + 0x010,      // I2C1 RX
+    I2C1_BASE + 0x010,      // I2C1 TX
     UART2_BASE + 0x000,     // UART2 RX
     UART2_BASE + 0x000,     // UART2 TX
 };
@@ -384,8 +384,8 @@ static const enum HAL_DMA_PERIPH_T audma_fifo_periph[AUDMA_PERIPH_NUM] = {
 static const uint32_t gpdma_fifo_addr[GPDMA_PERIPH_NUM] = {
     SDIO_BASE + 0x200,      // SDIO
     SDMMC_BASE + 0x200,     // SDMMC
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     SPI_BASE + 0x008,       // SPI RX
     SPI_BASE + 0x008,       // SPI TX
     SPILCD_BASE + 0x008,    // SPILCD RX
@@ -460,8 +460,8 @@ static const uint32_t audma_fifo_addr[AUDMA_PERIPH_NUM] = {
     SPI_BASE + 0x008,       // SPI TX
     I2S_BASE + 0x1C0,       // I2S RX
     I2S_BASE + 0x1C8,       // I2S TX
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     UART0_BASE + 0x000,     // UART0 RX
     UART0_BASE + 0x000,     // UART0 TX
 };
@@ -548,8 +548,8 @@ static const enum HAL_DMA_PERIPH_T audma_fifo_periph_remap[AUDMA_PERIPH_NUM] = {
 static const uint32_t gpdma_fifo_addr[GPDMA_PERIPH_NUM] = {
     SDIO_BASE + 0x200,      // SDIO
     SDMMC_BASE + 0x200,     // SDMMC
-    I2C0_BASE + 0x010,      // I2C RX
-    I2C0_BASE + 0x010,      // I2C TX
+    I2C0_BASE + 0x010,      // I2C0 RX
+    I2C0_BASE + 0x010,      // I2C0 TX
     SPI_BASE + 0x008,       // SPI RX
     SPI_BASE + 0x008,       // SPI TX
     SPILCD_BASE + 0x008,    // SPILCD RX

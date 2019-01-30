@@ -722,7 +722,7 @@ enum HAL_NORFLASH_RET_T hal_norflash_open(enum HAL_NORFLASH_ID_T id, const struc
     }
 
     // Divider will be set to normal read mode
-    result = norflash_set_mode(op);
+    result = norflash_set_mode(op, true);
     if (result != 0) {
         result = HAL_NORFLASH_BAD_OP;
         goto _exit;

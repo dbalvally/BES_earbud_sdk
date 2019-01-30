@@ -76,6 +76,21 @@ static void uart_tx(uint32_t xfer_size, int dma_error)
     }
     uart_tx_done = true;
 }
+
+#ifdef VCO_TEST_TOOL
+static unsigned int bt_rx(const unsigned char *data, unsigned int len);
+//vco test callback
+extern bool btdrv_vco_test_bridge_intsys_callback(const unsigned char *data);
+extern void btdrv_vco_test_process(uint8_t op);
+extern unsigned short btdrv_get_vco_test_process_flag(void);
+
+void vco_test_simu_bt_rx(void)
+{
+    const  unsigned char hci_bt_vco_test_event[] = {0x04, 0x0e, 0x04, 0x05, 0xaa,0xfc,0x00};
+    bt_rx(hci_bt_vco_test_event, sizeof(hci_bt_vco_test_event));
+}
+#endif
+
 static unsigned int bt_rx(const unsigned char *data, unsigned int len)
 {
     unsigned int processed = len;
@@ -87,27 +102,27 @@ static unsigned int bt_rx(const unsigned char *data, unsigned int len)
         processed = BT_UART_BRIDGE_BUF_LEN-bt_rx_len;
     }
     if (processed > 0) {
-        
-
         memcpy(bt_rx_data_p + bt_rx_len, data, processed);
         if((data[0] == 0x4) && (data[2] == 0xc) && (data[4] == 0x1) && (data[5] == 0x10))
         {
             *(uint8_t *)(bt_rx_data_p + bt_rx_len+7) = 0x09;
             *(uint8_t *)(bt_rx_data_p + bt_rx_len+10) = 0x09;
         }        
+        TRACE("[TX]:");
+        DUMP8("%02x ",bt_rx_data_p + bt_rx_len,processed);
 #ifndef __HW_AGC__
         if(hal_get_chip_metal_id() > HAL_CHIP_METAL_ID_1 && hal_get_chip_metal_id() <= HAL_CHIP_METAL_ID_4)
         {
             if(data[0]==0x04&&data[1]==0x03&&data[2]==0x0b&&data[3]==0x00)
             {
-    		*(volatile uint8_t *)0xc0004137 = 0xff;
+            *(volatile uint8_t *)0xc0004137 = 0xff;
             }
             if(data[0]==0x04&&data[1]==0x05&&data[2]==0x04)
             {
-    		*(volatile uint8_t *)0xc0004137 = 0x2;
+            *(volatile uint8_t *)0xc0004137 = 0x2;
             }
         }
-#endif          
+#endif
         bt_rx_len += processed;
         bt_rx_done = true;
     }
@@ -161,11 +176,21 @@ void btdrv_uart_bridge_loop(void)
         return;
     }
     hal_intersys_start_recv(br_intersys);
+    TRACE("Enter bridge mode");
 
     while (1) {
         if (uart_rx_done) {
             uart_rx_done = false;
             if (uart_rx_len > 0) {
+#ifdef VCO_TEST_TOOL
+                if(btdrv_vco_test_bridge_intsys_callback(uart_rx_data_p))
+                {
+                    uart_rx_len =0;
+                    continue ;
+                } 
+#endif
+                TRACE("[RX]:");
+                DUMP8("%02x ",uart_rx_data_p,uart_rx_len);
                 hal_intersys_send(br_intersys, HAL_INTERSYS_MSG_HCI, uart_rx_data_p, uart_rx_len);
             } else {
                 bt_tx_done = true;
@@ -188,6 +213,13 @@ void btdrv_uart_bridge_loop(void)
             bt_tx_done = false;
             hal_uart_dma_recv(br_uart, uart_rx_data_p, BT_UART_BRIDGE_BUF_LEN, NULL, NULL);
         }
+#ifdef VCO_TEST_TOOL
+        if(btdrv_get_vco_test_process_flag())
+        {
+            btdrv_vco_test_process(btdrv_get_vco_test_process_flag());
+            vco_test_simu_bt_rx();
+        }
+#endif
     }
 }
 

@@ -43,99 +43,95 @@ static void ota_send_segment_verification_response(bool isPass);
 static bool ota_check_whole_image_crc(void);
 static void ota_send_result_response(bool isSuccessful);
 #define LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC    512
-static const char* image_info_sanity_crc_key_word = "CRC32_OF_IMAGE=";
+static const char* image_info_sanity_crc_key_word = "CRC32_OF_IMAGE=0x";
+static const char* old_image_info_sanity_crc_key_word = "CRC32_OF_IMAGE=";
 
 static void ota_update_nv_data(void)
 {
-#ifndef FPGA
     uint32_t lock;
     if (ota_env.configuration.isToClearUserData)
     {
-        lock = int_lock();
+        lock = int_lock_global();
         pmu_flash_write_config();
         hal_norflash_erase(HAL_NORFLASH_ID_0, OTA_FLASH_LOGIC_ADDR + ota_env.flasehOffsetOfUserDataPool,
                 FLASH_SECTOR_SIZE_IN_BYTES);
         pmu_flash_read_config();
-        int_unlock(lock);
+        int_unlock_global(lock);
     }
 
     if (ota_env.configuration.isToRenameBT || ota_env.configuration.isToRenameBLE ||
         ota_env.configuration.isToUpdateBTAddr || ota_env.configuration.isToUpdateBLEAddr)
     {
-        uint32_t* pOrgFactoryData, *pUpdatedFactoryData;
+        factory_section_t* pOrgFactoryData, *pUpdatedFactoryData;
         pOrgFactoryData = (uint32_t *)(OTA_FLASH_LOGIC_ADDR + ota_env.flasehOffsetOfFactoryDataPool);
         memcpy(ota_env.dataBufferForBurning, (uint8_t *)pOrgFactoryData,
             FLASH_SECTOR_SIZE_IN_BYTES);
         pUpdatedFactoryData = (uint32_t *)&(ota_env.dataBufferForBurning);
 
-        if (NVREC_DEV_VERSION_1 == nv_record_dev_rev)
+        if (1 == factory_section_get_version())
         {
             if (ota_env.configuration.isToRenameBT)
             {
-                memset((uint8_t *)(pUpdatedFactoryData + dev_name), 0, sizeof(uint32_t)*(dev_bt_addr - dev_name));
-                memcpy((uint8_t *)(pUpdatedFactoryData + dev_name), (uint8_t *)(ota_env.configuration.newBTName),
+                memset(pUpdatedFactoryData->data.device_name, 0, 
+                	sizeof(pUpdatedFactoryData->data.device_name));
+                memcpy(pUpdatedFactoryData->data.device_name, (uint8_t *)(ota_env.configuration.newBTName),
                     NAME_LENGTH);
-            }
-
-            if (ota_env.configuration.isToRenameBLE)
-            {
-                // TODO: when the BLE name is in nv
             }
 
             if (ota_env.configuration.isToUpdateBTAddr)
             {            
-                memcpy((uint8_t *)(pUpdatedFactoryData + dev_bt_addr), (uint8_t *)(ota_env.configuration.newBTAddr),
+                memcpy(pUpdatedFactoryData->data.bt_address, (uint8_t *)(ota_env.configuration.newBTAddr),
                     BD_ADDR_LENGTH);
             }
 
             if (ota_env.configuration.isToUpdateBLEAddr)
             {
-                memcpy((uint8_t *)(pUpdatedFactoryData + dev_ble_addr), (uint8_t *)(ota_env.configuration.newBLEAddr),
+                memcpy(pUpdatedFactoryData->data.ble_address, (uint8_t *)(ota_env.configuration.newBLEAddr),
                     BD_ADDR_LENGTH);
             }
 
-            pUpdatedFactoryData[dev_crc] = 
-                crc32(0,(uint8_t *)(&pUpdatedFactoryData[dev_reserv1]),(dev_data_len-dev_reserv1)*sizeof(uint32_t));
+			pUpdatedFactoryData->data.
+            pUpdatedFactoryData->head.crc = 
+            	crc32(0,(unsigned char *)(&(pUpdatedFactoryData->head.reserved0)),
+	    			sizeof(factory_section_t)-2-2-4);
 
         }
         else
         {
             if (ota_env.configuration.isToRenameBT)
             {
-                memset((uint8_t *)(pUpdatedFactoryData + rev2_dev_name), 
-                    0, sizeof(uint32_t)*(rev2_dev_bt_addr - rev2_dev_name));
-                memcpy((uint8_t *)(pUpdatedFactoryData + rev2_dev_name), 
-                    (uint8_t *)(ota_env.configuration.newBTName),
+                memset(pUpdatedFactoryData->data.rev2_bt_name, 0, 
+                	sizeof(pUpdatedFactoryData->data.rev2_bt_name));
+                memcpy(pUpdatedFactoryData->data.rev2_bt_name, (uint8_t *)(ota_env.configuration.newBTName),
                     NAME_LENGTH);
             }
 
             if (ota_env.configuration.isToRenameBLE)
             {
-                memset((uint8_t *)(pUpdatedFactoryData + rev2_dev_ble_name), 
-                    0, sizeof(uint32_t)*(rev2_dev_section_end - rev2_dev_ble_name));
-                memcpy((uint8_t *)(pUpdatedFactoryData + rev2_dev_ble_name), 
-                    (uint8_t *)(ota_env.configuration.newBLEName),
-                    BLE_NAME_LEN_IN_NV);
+                memset(pUpdatedFactoryData->data.rev2_ble_name, 0, 
+                	sizeof(pUpdatedFactoryData->data.rev2_ble_name));
+                memcpy(pUpdatedFactoryData->data.rev2_ble_name, (uint8_t *)(ota_env.configuration.newBLEName),
+                    NAME_LENGTH);
             }
 
             if (ota_env.configuration.isToUpdateBTAddr)
             {            
-                memcpy((uint8_t *)(pUpdatedFactoryData + rev2_dev_bt_addr), (uint8_t *)(ota_env.configuration.newBTAddr),
+                memcpy(pUpdatedFactoryData->data.rev2_bt_addr, (uint8_t *)(ota_env.configuration.newBTAddr),
                     BD_ADDR_LENGTH);
             }
 
             if (ota_env.configuration.isToUpdateBLEAddr)
             {
-                memcpy((uint8_t *)(pUpdatedFactoryData + rev2_dev_ble_addr), (uint8_t *)(ota_env.configuration.newBLEAddr),
+                memcpy(pUpdatedFactoryData->data.rev2_ble_addr, (uint8_t *)(ota_env.configuration.newBLEAddr),
                     BD_ADDR_LENGTH);
             }
 
-            pUpdatedFactoryData[rev2_dev_crc] = 
-                crc32(0,(uint8_t *)(&pUpdatedFactoryData[rev2_dev_section_start_reserved]),
-                pUpdatedFactoryData[rev2_dev_data_len]);
+            pUpdatedFactoryData->data.rev2_crc = 
+            	crc32(0,(unsigned char *)(&(pUpdatedFactoryData->data.rev2_reserved0)),
+				pUpdatedFactoryData->data.rev2_data_len);
 
         }
-        lock = int_lock();
+        lock = int_lock_global();
         pmu_flash_write_config();
         hal_norflash_erase(HAL_NORFLASH_ID_0, OTA_FLASH_LOGIC_ADDR + ota_env.flasehOffsetOfFactoryDataPool,
                 FLASH_SECTOR_SIZE_IN_BYTES);
@@ -143,9 +139,8 @@ static void ota_update_nv_data(void)
         hal_norflash_write(HAL_NORFLASH_ID_0, OTA_FLASH_LOGIC_ADDR + ota_env.flasehOffsetOfFactoryDataPool,
             (uint8_t *)pUpdatedFactoryData, FLASH_SECTOR_SIZE_IN_BYTES);
         pmu_flash_read_config();
-        int_unlock(lock);        
+        int_unlock_global(lock);        
     }
-#endif
 }
 
 void ota_handler_init(void)
@@ -238,7 +233,7 @@ static void ota_flush_data_to_flash(uint8_t* ptrSource, uint32_t lengthToBurn, u
 
     TRACE("flush %d bytes to flash offset 0x%x", lengthToBurn, offsetInFlashToProgram);
 
-    lock = int_lock();
+    lock = int_lock_global();
     pmu_flash_write_config();
 
     uint32_t preBytes = (FLASH_SECTOR_SIZE_IN_BYTES - (offsetInFlashToProgram%FLASH_SECTOR_SIZE_IN_BYTES))%FLASH_SECTOR_SIZE_IN_BYTES;
@@ -293,7 +288,7 @@ static void ota_flush_data_to_flash(uint8_t* ptrSource, uint32_t lengthToBurn, u
     }
 
 	pmu_flash_read_config();
-	int_unlock(lock);
+	int_unlock_global(lock);
 }
 
 static void ota_send_start_response(bool isViaBle)
@@ -387,14 +382,7 @@ static bool ota_check_whole_image_crc(void)
     }
 
     TRACE("Original CRC32 is 0x%x Confirmed CRC32 is 0x%x.", ota_env.crc32OfImage, crc32Value);
-    if (crc32Value == ota_env.crc32OfImage)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (crc32Value == ota_env.crc32OfImage);
 }
 
 static int32_t find_key_word(uint8_t* targetArray, uint32_t targetArrayLen, 
@@ -428,28 +416,70 @@ static int32_t find_key_word(uint8_t* targetArray, uint32_t targetArrayLen,
     } 
 }
 
+static uint8_t asciiToHex(uint8_t asciiCode)
+{
+	if ((asciiCode >= '0') && (asciiCode <= '9'))
+	{
+		return asciiCode - '0';
+	}
+	else if ((asciiCode >= 'a') && (asciiCode <= 'f')) 
+	{
+		return asciiCode - 'a' + 10;
+	}
+	else if ((asciiCode >= 'A') && (asciiCode <= 'F')) 
+	{
+		return asciiCode - 'A' + 10;
+	}
+	else 
+	{
+		return 0xff;
+	}
+}
+
 static bool ota_check_image_data_sanity_crc(void) {
   // find the location of the CRC key word string
   uint8_t* ptrOfTheLast4KImage = (uint8_t *)(OTA_FLASH_LOGIC_ADDR+NEW_IMAGE_FLASH_OFFSET+
     ota_env.totalImageSize-LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC);
-  
+
+  uint32_t sanityCrc32;
+  uint32_t crc32ImageOffset;
   int32_t sanity_crc_location = find_key_word(ptrOfTheLast4KImage, 
     LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC, 
     (uint8_t *)image_info_sanity_crc_key_word, 
     strlen(image_info_sanity_crc_key_word));
   if (-1 == sanity_crc_location)
   {
-    // if no sanity crc, the image has the old format, just ignore such a check
-    return true;
+  	sanity_crc_location = find_key_word(ptrOfTheLast4KImage, 
+    	LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC, 
+    	(uint8_t *)old_image_info_sanity_crc_key_word, 
+    	strlen(old_image_info_sanity_crc_key_word));
+    if (-1 == sanity_crc_location)
+    {
+      // if no sanity crc, fail the check
+      return false;
+    }
+    else
+    {
+      crc32ImageOffset = sanity_crc_location+ota_env.totalImageSize-
+    	LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC+strlen(old_image_info_sanity_crc_key_word);
+      sanityCrc32 = *(uint32_t *)(OTA_FLASH_LOGIC_ADDR+NEW_IMAGE_FLASH_OFFSET+crc32ImageOffset);
+    }
+  }
+  else
+  {
+  	crc32ImageOffset = sanity_crc_location+ota_env.totalImageSize-
+    	LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC+strlen(image_info_sanity_crc_key_word);
+
+    sanityCrc32 = 0;
+    uint8_t* crcString = (uint8_t *)(OTA_FLASH_LOGIC_ADDR+NEW_IMAGE_FLASH_OFFSET+crc32ImageOffset);
+
+    for (uint8_t index = 0;index < 8;index++)
+    {
+  	  sanityCrc32 |= (asciiToHex(crcString[index]) << (28-4*index));
+    }
   }
 
   TRACE("sanity_crc_location is %d", sanity_crc_location);
-
-  uint32_t crc32ImageOffset = sanity_crc_location+ota_env.totalImageSize-
-    LEN_OF_IMAGE_TAIL_TO_FIND_SANITY_CRC+strlen(image_info_sanity_crc_key_word);
-  TRACE("Bytes to generate crc32 is %d", crc32ImageOffset);
-
-  uint32_t sanityCrc32 = *(uint32_t *)(OTA_FLASH_LOGIC_ADDR+NEW_IMAGE_FLASH_OFFSET+crc32ImageOffset);
 
   TRACE("sanityCrc32 is 0x%x", sanityCrc32);
 
@@ -528,34 +558,34 @@ static void app_update_magic_number_of_app_image(uint32_t newMagicNumber)
 {
     uint32_t lock;
 
-    lock = int_lock();
+    lock = int_lock_global();
     hal_norflash_read(HAL_NORFLASH_ID_0, ota_env.dstFlashOffsetForNewImage, 
         ota_env.dataBufferForBurning, FLASH_SECTOR_SIZE_IN_BYTES);
-    int_unlock(lock); 
+    int_unlock_global(lock); 
     
     *(uint32_t *)ota_env.dataBufferForBurning = newMagicNumber;
     
-    lock = int_lock();
+    lock = int_lock_global();
     pmu_flash_write_config();
     hal_norflash_erase(HAL_NORFLASH_ID_0, ota_env.dstFlashOffsetForNewImage,
         FLASH_SECTOR_SIZE_IN_BYTES);
     hal_norflash_write(HAL_NORFLASH_ID_0, ota_env.dstFlashOffsetForNewImage,
         ota_env.dataBufferForBurning, FLASH_SECTOR_SIZE_IN_BYTES);
     pmu_flash_read_config();
-    int_unlock(lock);    
+    int_unlock_global(lock);
 }
 
 static void ota_update_boot_info(FLASH_OTA_BOOT_INFO_T* otaBootInfo)
 {
     uint32_t lock;
 
-    lock = int_lock();
+    lock = int_lock_global();
     pmu_flash_write_config();
     hal_norflash_erase(HAL_NORFLASH_ID_0, OTA_BOOT_INFO_FLASH_OFFSET, FLASH_SECTOR_SIZE_IN_BYTES);
     hal_norflash_write(HAL_NORFLASH_ID_0, OTA_BOOT_INFO_FLASH_OFFSET, (uint8_t*)otaBootInfo, sizeof(FLASH_OTA_BOOT_INFO_T));
     pmu_flash_read_config();
 
-    int_unlock(lock);
+    int_unlock_global(lock);
 }
 
 void ota_handle_received_data(uint8_t *data, uint32_t len, bool isViaBle)

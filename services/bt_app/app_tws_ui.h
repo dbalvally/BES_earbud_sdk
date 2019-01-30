@@ -114,8 +114,8 @@ typedef struct {
 
 typedef void(*app_tws_pairing_preparation_done_callback)(void);
 typedef void(*app_tws_pairing_done_callback)(void);
+#define MAX_LBRT_SLOT_CLOCK                   ((1L<<27) - 1)
 #ifdef LBRT
-
 #define LBRT_DEBUG  1
 #if LBRT_DEBUG
 #define LBRT_PRINT(fmt, ...) TRACE(fmt, ##__VA_ARGS__)
@@ -127,11 +127,11 @@ typedef void(*app_tws_pairing_done_callback)(void);
 
 #define LBRT_ENABLE                           1
 #define LBRT_DISABLE                          0
-#define BT_CONTROLLER_TICKS_TO_MS(tick)              ((uint32_t)((tick) * 312.5/1000))
-#define BT_CONTROLLER_MS_TO_TICKS(ms)                ((uint32_t)((ms) * 1000/312.5))
+#define BT_CONTROLLER_TICKS_TO_MS(tick)       ((uint32_t)((tick) * 312.5/1000))
+#define BT_CONTROLLER_MS_TO_TICKS(ms)         ((uint32_t)((ms) * 1000/312.5))
 #define APP_TWS_LBRT_TIMEOUT_IN_MS            300
 #define APP_TWS_LBRT_SWITCH_TIME_IN_MS        100
-#define APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS      BT_CONTROLLER_MS_TO_TICKS(APP_TWS_LBRT_TIMEOUT_IN_MS + 100)
+#define APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS      BT_CONTROLLER_MS_TO_TICKS(APP_TWS_LBRT_TIMEOUT_IN_MS)
 
 typedef struct {
     uint32_t ticks;
@@ -151,7 +151,8 @@ bool app_tws_req_lbrt_ping(uint32_t current_ticks);
 void app_set_lbrt_enable(bool enable);
 bool app_get_lbrt_enable(void);
 void app_tws_exit_lbrt_mode(void);
-void app_tws_config_lbrt(uint16_t connHandle, uint8_t en);
+void app_tws_op_bt_lbrt(uint16_t connHandle, uint8_t en);
+void app_tws_toggle_lbrt_mode(uint8_t en);
 #endif
 
 #ifdef TWS_RING_SYNC
@@ -178,10 +179,6 @@ void app_tws_simulate_pairing(void);
 void app_tws_freeman_simulate_pairing(void);
 
 bool app_bt_pairing_request_handler(void);
-#endif
-#ifdef LBRT
-void app_tws_lbrt_simulate_pairing(void);
-void app_tws_req_set_lbrt(uint8_t en, uint8_t initial_req, uint32_t ticks);
 #endif
 #ifdef __TWS_PAIR_DIRECTLY__
 void app_tws_slave_enter_pairing(void);
@@ -267,8 +264,9 @@ void app_tws_event_exchange_supervisor_timer_cancel(void);
 bool app_tws_set_emsack_mode(bool enable);
 void app_tws_set_emsack_mode_timer(uint32_t timeoutInMs);
 bool app_tws_share_esco_retx_nb(uint8_t retx_nb);
-void simulate_hci_get_tws_slave_mobile_rssi(void);
+void app_tws_get_slave_mobile_rssi(void);
 int8_t app_tws_get_master_slave_rssi(void);
+int8_t app_tws_get_master_mobile_rssi(void);
 
 #ifdef __TWS_ROLE_SWITCH__
 

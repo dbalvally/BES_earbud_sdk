@@ -26,11 +26,11 @@ typedef struct {
     int32_t     bypass;
     float       left_gain;              // MIC Left增益补偿
     float       right_gain;             // MIC Right增益补偿
-    int32_t     delay_tapsM;             // MIC L/R delay samples. 0: 适用于麦克距离为<2cm; 1: 适用于麦克距离为2cm左右; 2: 适用于麦克距离为4cm左右
+    int32_t     delay_tapsM;            // MIC L/R delay samples. 0: 适用于麦克距离为<2cm; 1: 适用于麦克距离为2cm左右; 2: 适用于麦克距离为4cm左右
     int32_t     delay_tapsS;
-	int32_t     delay_tapsC;
-	float       coefH[2][5];
-	float       coefL[2][5];
+    int32_t     delay_tapsC;
+    float       coefH[2][5];            // {{a0,a1,a2,a3,a4},{b0,b1,b2,b3,b4}}
+    float       coefL[2][5];            // {{a0,a1,a2,a3,a4},{b0,b1,b2,b3,b4}}
 } SensorMicDenoiseConfig;
 
 struct SensorMicDenoiseState_;

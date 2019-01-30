@@ -229,6 +229,11 @@ extern const struct prf_task_cbs* amsc_prf_itf_get(void);
 #if (BLE_GFPS_PROVIDER)
 extern const struct prf_task_cbs* gfpsp_prf_itf_get(void);
 #endif //(BLE_GFPS_PROVIDER)
+
+#ifdef BLE_AMA_VOICE
+extern const struct prf_task_cbs* ama_prf_itf_get(void);
+#endif
+
 #if (ANCS_PROXY_ENABLE)
 extern const struct prf_task_cbs* ancs_proxy_prf_itf_get(void);
 extern const struct prf_task_cbs* ams_proxy_prf_itf_get(void);
@@ -271,9 +276,9 @@ static const struct prf_task_cbs * prf_itf_get(uint16_t task_id)
 {
     const struct prf_task_cbs* prf_cbs = NULL;
 
+    BLE_DBG(">>>>>> prf_itf_get task_id:  %d <<<<<<\n",  KE_TYPE_GET(task_id));
     switch(KE_TYPE_GET(task_id))
     {
-        BLE_DBG(">>>>>> prf_itf_get task_id:  %d <<<<<<\n",  KE_TYPE_GET(task_id));
         #if (BLE_HT_THERMOM)
         case TASK_ID_HTPT:
             prf_cbs = htpt_prf_itf_get();
@@ -592,6 +597,12 @@ static const struct prf_task_cbs * prf_itf_get(uint16_t task_id)
             prf_cbs = gfpsp_prf_itf_get();
             break;
         #endif //(BLE_GFPS_PROVIDER) 
+        
+#if (BLE_AMA_VOICE)
+        case TASK_ID_AMA:
+            prf_cbs = ama_prf_itf_get();
+            break;
+#endif //(BLE_AMA)  
 
         #if (BLE_DATAPATH_SERVER)
         case TASK_ID_DATAPATHPS:

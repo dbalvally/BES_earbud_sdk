@@ -192,8 +192,8 @@ void hal_cmu_rom_setup(void)
     hal_cmu_reset_clear(HAL_CMU_MOD_O_FLASH);
 
     // Disable cache (for JTAG reset and run)
-    hal_cache_enable(HAL_CACHE_ID_I_CACHE, HAL_CACHE_NO);
-    hal_cache_enable(HAL_CACHE_ID_D_CACHE, HAL_CACHE_NO);
+    hal_cache_disable(HAL_CACHE_ID_I_CACHE);
+    hal_cache_disable(HAL_CACHE_ID_D_CACHE);
 
     // Init APB clock
     hal_cmu_apb_init_div();

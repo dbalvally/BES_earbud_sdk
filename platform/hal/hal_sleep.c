@@ -183,6 +183,10 @@ int SRAM_TEXT_LOC hal_sleep_irq_pending(void)
     return 0;
 }
 
+#ifdef CHIP_BEST2300
+void bt_drv_sleep(void);
+void bt_drv_wakeup(void);
+#endif
 static enum HAL_SLEEP_STATUS_T SRAM_TEXT_LOC hal_sleep_lowpower_mode(void)
 {
     enum HAL_SLEEP_STATUS_T ret;
@@ -203,7 +207,9 @@ static enum HAL_SLEEP_STATUS_T SRAM_TEXT_LOC hal_sleep_lowpower_mode(void)
     analog_sleep();
     pmu_sleep();
     hal_gpadc_sleep();
-
+#ifdef CHIP_BEST2300
+    bt_drv_sleep();
+#endif
     // End of sleep
 
     //psram_sleep();
@@ -224,6 +230,9 @@ static enum HAL_SLEEP_STATUS_T SRAM_TEXT_LOC hal_sleep_lowpower_mode(void)
     pmu_wakeup();
     hal_gpadc_wakeup();
     analog_wakeup();
+#ifdef CHIP_BEST2300
+    bt_drv_wakeup();
+#endif    
     // Modules (except for psram and flash) wakeup
 
     // End of wakeup

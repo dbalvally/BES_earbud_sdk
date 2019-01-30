@@ -164,6 +164,7 @@ enum TASK_API_ID
     TASK_ID_AMSP         = 74,   // AMS Proxy Task
 
 
+	TASK_ID_AMA 		  = 75,   // ama Task
     /* 240 -> 241 reserved for Audio Mode 0 */
     TASK_ID_AM0          = 240,  // BLE Audio Mode 0 Task
     TASK_ID_AM0_HAS      = 241,  // BLE Audio Mode 0 Hearing Aid Service Task

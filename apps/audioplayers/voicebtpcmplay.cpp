@@ -1424,7 +1424,7 @@ uint32_t voicebtpcm_pcm_audio_more_data(uint8_t *buf, uint32_t len)
 
             if (bt_sco_codec_is_msbc() == false)
             {
-#if defined (SPEECH_PLC)
+#if defined (SPEECH_RX_PLC)
                 speech_plc_8000((PlcSt_8000 *)speech_plc,(short *)decode_buf,decode_len_unit);
 #endif
             }

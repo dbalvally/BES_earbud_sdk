@@ -66,7 +66,6 @@ void app_stop_auto_power_off_supervising(void);
 void app_refresh_random_seed(void);
 
 void app_start_postponed_reset(void);
-void app_tws_get_tws_slave_mobile_rssi(void);
 
 ////////////////////
 

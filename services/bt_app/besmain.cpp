@@ -119,7 +119,9 @@ extern "C" void hci_simulate_reconnect_state_machine_handler(void);
 extern "C" void tws_received_acl_data_handler(void);
 extern "C" void tws_transmitted_acl_data_handler(void);
 void app_tws_pending_role_switch_op_handling(void);
-
+#ifdef LBRT
+void app_tws_lbrt_ping_op_handler(void);
+#endif
 #define BESTHR_MAILBOX_MAX (30)
 osMailQDef (besthr_mailbox, BESTHR_MAILBOX_MAX, BESTHR_MSG_BLOCK);
 osMailQId bes_mailbox;
@@ -227,18 +229,51 @@ void auth_handler_func();
 
 static void __set_local_dev_name(void)
 {
-    factory_section_data_t *factory_data = factory_section_data_ptr_get();
-
-    if (factory_data) {
+    uint8_t* btName = factory_section_get_bt_name();
+    if (btName) {
 #ifdef __TWS_PAIR_DIRECTLY__
-        BT_LOCAL_NAME = (const char*)factory_data->device_name;
+        BT_LOCAL_NAME = (const char*)btName;
 #endif
-        bt_set_local_dev_name((const unsigned char*)(factory_data->device_name),
-                                strlen((char *)(factory_data->device_name)) + 1);
+        bt_set_local_dev_name((const unsigned char*)(btName),
+                                strlen((char *)(btName)) + 1);
     } else {
         bt_set_local_dev_name((const unsigned char*)BT_LOCAL_NAME,
                                 strlen(BT_LOCAL_NAME) + 1);
     }
+}
+
+void gen_bt_addr_for_debug(void)
+{
+    static const char host[] = TO_STRING(BUILD_HOSTNAME);
+    static const char user[] = TO_STRING(BUILD_USERNAME);
+    uint32_t hlen, ulen;
+    uint32_t i, j;
+    uint32_t addr_size = BTIF_BD_ADDR_SIZE;
+
+    hlen = strlen(host);
+    ulen = strlen(user);
+
+    TRACE("Configured BT addr is:");
+    DUMP8("%02x ", bt_addr, BTIF_BD_ADDR_SIZE);
+
+    j = 0;
+    for (i = 0; i < hlen; i++) {
+        bt_addr[j++] ^= host[i];
+        if (j >= addr_size / 2) {
+            j = 0;
+        }
+    }
+
+    j = addr_size / 2;
+    for (i = 0; i < ulen; i++) {
+        bt_addr[j++] ^= user[i];
+        if (j >= addr_size) {
+            j = addr_size / 2;
+        }
+    }
+
+    TRACE("Modified debug BT addr is:");
+    DUMP8("%02x ", bt_addr, BTIF_BD_ADDR_SIZE);
 }
 
 static void __set_bt_sco_num(void)
@@ -294,7 +329,7 @@ int besmain(void)
     bt_stack_config();
 
 #if VOICE_DATAPATH
-	app_voicepath_bt_init();
+    app_voicepath_bt_init();
 #endif
 
     ///init bt key
@@ -367,7 +402,9 @@ int besmain(void)
         tws_transmitted_acl_data_handler();
 
         app_check_pending_stop_sniff_op();
-
+#ifdef LBRT
+        app_tws_lbrt_ping_op_handler();
+#endif
     }
 
     return 0;

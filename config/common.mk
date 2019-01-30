@@ -122,7 +122,7 @@ export CHIP_SPI_VER := 1
 endif
 
 export FLASH_SIZE ?= 0x200000
-PSRAM_SIZE ?= 0x400000
+export PSRAM_SIZE ?= 0x400000
 
 KBUILD_CPPFLAGS += -DCHIP_HAS_UART=$(CHIP_HAS_UART)
 KBUILD_CPPFLAGS += -DCHIP_HAS_I2C=$(CHIP_HAS_I2C)
@@ -172,6 +172,15 @@ endif
 
 ifneq ($(FLASH_REGION_SIZE),)
 CPPFLAGS_${LDS_FILE} += -DFLASH_REGION_SIZE=$(FLASH_REGION_SIZE)
+endif
+
+ifeq ($(AUDIO_SECTION_ENABLE),1)
+KBUILD_CPPFLAGS += -DAUDIO_SECTION_ENABLE
+# depend on length of (ANC + AUDIO + SPEECH) in aud_section.c
+AUD_SECTION_SIZE ?= 0x8000
+ifeq ($(ANC_APP),1)
+$(error Can not enable AUDIO_SECTION_ENABLE and ANC_APP together)
+endif
 endif
 
 ifeq ($(ANC_APP),1)
@@ -442,7 +451,7 @@ $(error Invalid FLASH_CHIP: $(filter-out $(VALID_FLASH_CHIP_LIST),$(FLASH_CHIP))
 endif
 endif
 
-NV_REC_DEV_VER ?= 1
+NV_REC_DEV_VER ?= 2
 
 export NO_SLEEP ?= 0
 
@@ -828,6 +837,16 @@ ifeq ($(SPEECH_TX_DC_FILTER),1)
 KBUILD_CPPFLAGS += -DSPEECH_TX_DC_FILTER
 endif
 
+export SPEECH_TX_MIC_CALIBRATION ?= 0
+ifeq ($(SPEECH_TX_MIC_CALIBRATION),1)
+KBUILD_CPPFLAGS += -DSPEECH_TX_MIC_CALIBRATION
+endif
+
+export SPEECH_TX_MIC_FIR_CALIBRATION ?= 0
+ifeq ($(SPEECH_TX_MIC_FIR_CALIBRATION),1)
+KBUILD_CPPFLAGS += -DSPEECH_TX_MIC_FIR_CALIBRATION
+endif
+
 export SPEECH_TX_NS ?= 0
 ifeq ($(SPEECH_TX_NS),1)
 KBUILD_CPPFLAGS += -DSPEECH_TX_NS
@@ -1080,7 +1099,12 @@ CPU_CFLAGS += -mno-unaligned-access
 endif
 
 ifeq ($(CHIP_HAS_FPU),1)
-CPU_CFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard -fsingle-precision-constant
+CPU_CFLAGS += -mfpu=fpv4-sp-d16
+ifeq ($(SOFT_FLOAT_ABI),1)
+CPU_CFLAGS += -mfloat-abi=softfp
+else
+CPU_CFLAGS += -mfloat-abi=hard
+endif
 else
 CPU_CFLAGS += -mfloat-abi=soft
 endif
@@ -1110,6 +1134,11 @@ ifeq ($(BES_OTA_ENABLED),1)
 KBUILD_CPPFLAGS += -DBES_OTA_ENABLED
 endif
 
+export BES_OTA_BASIC ?= 0
+ifeq ($(BES_OTA_BASIC),1)
+KBUILD_CPPFLAGS += -DBES_OTA_BASIC
+endif
+
 export GFPS_ENABLE ?= 0
 ifeq ($(GFPS_ENABLE),1)
 KBUILD_CPPFLAGS += -D_GFPS_=1
@@ -1121,3 +1150,7 @@ ifeq ($(AUDIO_SCO_BTPCM_CHANNEL),1)
 KBUILD_CPPFLAGS += -D_SCO_BTPCM_CHANNEL_
 endif
 
+export ADAPTIVE_BLE_CONN_PARAM ?= 0
+ifeq ($(ADAPTIVE_BLE_CONN_PARAM),1)
+KBUILD_CPPFLAGS += -DADAPTIVE_BLE_CONN_PARAM_ENABLED
+endif

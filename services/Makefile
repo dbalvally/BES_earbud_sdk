@@ -1,5 +1,5 @@
 obj-y := audio_dump/ audioflinger/ bt_profiles/ fs/ bt_app/ overlay/ resources/ ../utils/crc32/ \
-		../utils/heap/ bt_if/ osif/
+		../utils/heap/ bt_if/ osif/ ../utils/kfifo/
 ifeq ($(VOICE_DATAPATH_ENABLED),1)
 obj-y += voicepath/
 obj-y += voicepath/$(VOICE_DATAPATH_TYPE)/
@@ -45,3 +45,12 @@ endif
 ifeq ($(HALFDUPLEXUART),1)
 obj-y += halfduplexuart/
 endif
+
+ifeq ($(BES_OTA_BASIC),1)
+obj-y += ota/
+endif
+
+ifeq ($(AMA_VOICE),1)
+obj-y += ai_voice/
+endif
+

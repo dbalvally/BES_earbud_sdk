@@ -133,11 +133,11 @@ void BOOT_TEXT_FLASH_LOC BootInit(void)
     uint32_t *dst, *src;
 
     // Enable icache
-    hal_cache_enable(HAL_CACHE_ID_I_CACHE, HAL_CACHE_YES);
+    hal_cache_enable(HAL_CACHE_ID_I_CACHE);
     // Enable dcache
-    hal_cache_enable(HAL_CACHE_ID_D_CACHE, HAL_CACHE_YES);
+    hal_cache_enable(HAL_CACHE_ID_D_CACHE);
     // Enable write buffer
-    hal_cache_writebuffer_enable(HAL_CACHE_ID_D_CACHE, HAL_CACHE_YES);
+    hal_cache_writebuffer_enable(HAL_CACHE_ID_D_CACHE);
 
     // Init boot sections
     for (dst = __boot_sram_start__, src = __boot_sram_start_flash__;

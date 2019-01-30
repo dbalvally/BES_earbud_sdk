@@ -225,6 +225,8 @@ int hal_trace_printf(uint32_t lvl, const char *fmt, ...);
 
 int hal_trace_printf_without_crlf(uint32_t lvl, const char *fmt, ...);
 
+int hal_trace_printf_with_tag(uint32_t lvl, const char *tag, const char *fmt, ...);
+
 void hal_trace_printf_imm(uint32_t lvl, const char *fmt, ...);
 
 void hal_trace_printf_without_crlf_imm(uint32_t lvl, const char *fmt, ...);
@@ -246,6 +248,9 @@ int hal_trace_crash_printf_without_crlf(const char *fmt, ...);
 void hal_trace_flash_flush(void);
 
 int hal_trace_with_log_dump(const unsigned char *buf, unsigned int buf_len);
+
+void hal_trace_print_backtrace(uint32_t addr, uint32_t search_cnt, uint32_t print_cnt);
+
 static inline void hal_trace_dummy(const char *fmt, ...) { }
 
 int hal_trace_tportopen(void);
@@ -262,6 +267,12 @@ int hal_trace_tportclr(int port);
 #define ASSERT_DUMP_ARGS    const char *fmt, ...
 #endif
 void NORETURN hal_trace_assert_dump(ASSERT_DUMP_ARGS);
+
+int hal_trace_address_writable(uint32_t addr);
+
+int hal_trace_address_executable(uint32_t addr);
+
+int hal_trace_address_readable(uint32_t addr);
 
 
 //==============================================================================

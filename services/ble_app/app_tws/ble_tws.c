@@ -417,6 +417,11 @@ int app_scotxsilence_force_disable(void)
 
 static void app_start_ble_tws_advertising_handler(uint8_t advType, uint16_t adv_interval_in_ms)
 {
+    if (!app_is_ble_adv_allowed())
+    {
+        return;
+    }
+
     LOG_PRINT_BLE("Start BLE adv with interval %d ms advType:%d state is %d", adv_interval_in_ms, advType, twsBoxEnv.state);
     switch (twsBoxEnv.state)
     {
@@ -488,6 +493,12 @@ void app_start_ble_tws_advertising(uint8_t advType, uint16_t adv_interval_in_ms)
 void app_start_ble_tws_advertising_in_bt_thread(uint8_t advType, uint16_t adv_interval_in_ms)
 {
     app_start_custom_function_in_bt_thread(advType, adv_interval_in_ms, (uint32_t)app_start_ble_tws_advertising);
+}
+
+void app_start_connectable_ble_adv(uint16_t adv_interval_in_ms)
+{
+	app_start_custom_function_in_bt_thread(GAPM_ADV_UNDIRECT, adv_interval_in_ms, 
+		(uint32_t)app_start_ble_tws_advertising);
 }
 
 static void ble_adv_speed_switch_timer_cb(void const *n)
@@ -914,6 +925,7 @@ static void ble_activity_idle_timer_cb(void const *n)
 
 #ifdef __TWS_PAIR_DIRECTLY__
 bool slaveDisconMobileFlag=FALSE;
+bool slaveInReconMasterFlag=FALSE;
 #endif
 
 static void ble_adv_data_parse(uint8_t* bleBdAddr, int8_t rssi, unsigned char *adv_buf, unsigned char len)
@@ -968,6 +980,10 @@ static void ble_adv_data_parse(uint8_t* bleBdAddr, int8_t rssi, unsigned char *a
                         if ((!isTwsParingInProgress)  && (!IS_CONNECTED_WITH_TWS()))
                         {
                             // connect with the tws master via ble
+                            if(TWSSLAVE == tws_mode_ptr()->mode)
+                            {
+                                slaveInReconMasterFlag=true;
+                            }
                             memcpy(bdAddrToConnect, bleBdAddr, BD_ADDR_SIZE);
                             if((TWSSLAVE == tws_mode_ptr()->mode)&&(IS_CONNECTED_WITH_MOBILE()))
                             {
@@ -1630,6 +1646,7 @@ void app_bt_start_reset_pairing(void)
     btif_me_set_bt_address(bt_addr);
 
     app_bt_send_request(APP_BT_REQ_ACCESS_MODE_SET, BTIF_BAM_GENERAL_ACCESSIBLE,0,0);
+    //app_bt_send_request(APP_BT_REQ_ACCESS_MODE_SET, BTIF_BAM_LIMITED_ACCESSIBLE,0,0);
     app_start_10_second_timer(APP_PAIR_TIMER_ID);
     //set_conn_op_state(CONN_OP_STATE_WAITING_FOR_MOBILE_CONNECTION);
 
@@ -2165,20 +2182,18 @@ bool app_is_ble_adv_allowed_without_chargerbox(void)
     }
     else
     {
-        if ((app_tws_is_master_mode()) && !IS_CONNECTED_WITH_TWS()
-        && IS_CONNECTED_WITH_MOBILE_PROFILE())
+        if (app_tws_is_slave_mode())
         {
-            return true;
+        	TRACE("not allowed ble adv !!");
+            return false;
         }
         else
-        {
-            TRACE("not allowed ble adv !!");
-            return false;
+        {            
+            return true;
         }
     }
 }
 #endif
-
 
 bool app_is_ble_adv_allowed(void)
 {
@@ -2190,6 +2205,11 @@ bool app_is_ble_adv_allowed(void)
 #else
     if (app_tws_is_role_switching_on())
 #endif
+    {
+        return false;
+    }
+
+    if (btapp_hfp_is_sco_active())
     {
         return false;
     }
@@ -2207,25 +2227,19 @@ bool app_is_ble_adv_allowed(void)
     else
 #endif
     {
-        if ((app_tws_is_master_mode()) && !IS_CONNECTED_WITH_TWS()
-            && IS_CONNECTED_WITH_MOBILE_PROFILE())
+        if (app_tws_is_slave_mode())
         {
-            return true;
+            return false;
         }
         else
         {
-            return false;
+            return true;
         }
     }
 }
 
 void app_ble_update_adv_connect_with_mobile(uint8_t isConnectedWithMobile)
 {
-    if (!app_is_ble_adv_allowed())
-    {
-        return;
-    }
-
     if(isConnectedWithMobile != twsBoxEnv.adv_manufacture_data_section.isConnectedWithMobile)
     {
         twsBoxEnv.adv_manufacture_data_section.isConnectedWithMobile = isConnectedWithMobile;

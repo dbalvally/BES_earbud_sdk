@@ -63,6 +63,12 @@
 #include "app_voicepath.h"
 #endif
 
+#include "ble_tws.h"
+
+#ifdef __AMA_VOICE__
+#include "app_ama_handle.h"
+#endif
+
 #define HF_VOICE_DISABLE  0
 
 #define HF_VOICE_ENABLE   1
@@ -90,6 +96,9 @@ int store_voicecvsd_buffer(unsigned char *buf, unsigned int len);
 int store_voicemsbc_buffer(unsigned char *buf, unsigned int len);
 int8_t app_battery_current_level(void);
 
+extern "C" void switch_to_high_speed_conn_interval(void);
+extern "C" void switch_to_low_speed_conn_interval(void);
+
 #ifndef _SCO_BTPCM_CHANNEL_
 static struct HF_SENDBUFF_CONTROL_T  hf_sendbuff_ctrl;
 #endif
@@ -114,6 +123,12 @@ btapp_sniffer_sco_status_callback sniffer_sco_status_callback;
 extern struct BT_DEVICE_T  app_bt_device;
 
 extern void app_bt_fill_mobile_hfp_channel(uint32_t deviceId, hf_chan_handle_t chan);
+
+#define HFP_AUDIO_CLOSED_DELAY_RESUME_ADV_IN_MS		1500
+static void app_hfp_audio_closed_delay_resume_ble_adv_timer_cb(void const *n);
+osTimerDef (APP_HFP_AUDIO_CLOSED_DELAY_RESUME_BLE_ADV_TIMER, 
+    app_hfp_audio_closed_delay_resume_ble_adv_timer_cb); 
+osTimerId	app_hfp_audio_closed_delay_resume_ble_adv_timer_id = NULL;
 
 #ifdef __TWS_CALL_DUAL_CHANNEL__
 #define SNIFFER_SCO_CHECK_TIMEOUT (2000)
@@ -543,9 +558,6 @@ static void hfp_connected_ind_handler(hf_chan_handle_t chan, struct hfp_context 
 
     app_bt_device.ptrHfChannel[chan_id_flag.id] = chan;
 
-    #if VOICE_DATAPATH
-        app_voice_path_bt_restore_sdp_service();
-    #endif
 #if defined(HFP_1_6_ENABLE)
     btif_hf_set_negotiated_codec(chan, BTIF_HF_SCO_CODEC_CVSD);
 #endif
@@ -596,8 +608,9 @@ static void hfp_connected_ind_handler(hf_chan_handle_t chan, struct hfp_context 
 #endif
 
     app_bt_stream_volume_ptr_update((uint8_t *)ctx->remote_dev_bdaddr.address);
-    if(app_tws_is_master_mode())
-    {
+    if(app_tws_mode_is_master())
+    {   
+        TRACE("sync tws volume !");
         app_tws_set_slave_volume(a2dp_volume_get_tws());
     }    
 
@@ -660,6 +673,10 @@ static void hfp_connected_ind_handler(hf_chan_handle_t chan, struct hfp_context 
         bt_status_t ret = app_bt_disconnect_hfp();
         TRACE("HF_DisconnectServiceLink returns 0x%x", ret);
     }
+    
+#ifdef __AMA_VOICE__
+    post_hfp_connected();
+#endif
 }
 
 static void hfp_disconnected_ind_common_handler(hf_chan_handle_t chan, struct hfp_context *ctx)
@@ -687,10 +704,6 @@ static void hfp_disconnected_ind_common_handler(hf_chan_handle_t chan, struct hf
     }
 #else
     app_bt_stream_volume_ptr_update(NULL);
-    if(app_tws_is_master_mode())
-    {
-        app_tws_set_slave_volume(a2dp_volume_get_tws());
-    }
 #endif
     for (uint8_t i=0; i<BT_DEVICE_NUM; i++) {
         if (chan == app_bt_device.hf_channel[i]) {
@@ -730,6 +743,10 @@ static void hfp_disconnected_ind_handler(hf_chan_handle_t chan, struct hfp_conte
 
     if (IS_CONNECTED_WITH_MOBILE())
         return;
+
+#ifdef __AMA_VOICE__
+    post_hfp_disconnected();
+#endif
 
     if (IS_CONNECTING_MOBILE()) {
         set_conn_op_state(CONN_OP_STATE_IDLE);
@@ -956,12 +973,34 @@ static void hfp_current_call_state_handler(hf_chan_handle_t chan, struct hfp_con
 #endif
 }
 
+bool btapp_hfp_is_sco_active(void)
+{
+    uint8_t i;
+    for (i = 0;i < BT_DEVICE_NUM;i++)
+    {
+        if ((BTIF_HF_AUDIO_CON == app_bt_device.hf_audio_state[i]))
+        {
+            return true;
+        }
+    }
+    return false;    
+}
+
+bool btapp_is_bt_active(void)
+{
+    return btapp_hfp_is_sco_active()||a2dp_is_music_ongoing();
+}
+
 static void hfp_audio_connected_handler(hf_chan_handle_t chan, struct hfp_context *ctx)
 {
     hf_chan_handle_t chan_tmp;
 
     if (ctx->status != BT_STS_SUCCESS)
         return;
+
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+    switch_to_low_speed_conn_interval();
+#endif
 
     log_event_1(EVENT_HFP_SCO_LINK_CREATED, ctx->remote_dev_hcihandle & 3);
 #ifdef __ENABLE_WEAR_STATUS_DETECT__
@@ -1036,6 +1075,25 @@ static void hfp_audio_connected_handler(hf_chan_handle_t chan, struct hfp_contex
 #endif
 }
 
+static void app_hfp_audio_closed_delay_resume_ble_adv_timer_cb(void const *n)
+{
+#ifdef IAG_BLE_INCLUDE 
+    app_start_connectable_ble_adv(BLE_ADVERTISING_INTERVAL);
+#endif
+}
+static void app_hfp_resume_ble_adv(void)
+{
+    if (NULL == app_hfp_audio_closed_delay_resume_ble_adv_timer_id)
+    {
+        app_hfp_audio_closed_delay_resume_ble_adv_timer_id = 
+            osTimerCreate(osTimer(APP_HFP_AUDIO_CLOSED_DELAY_RESUME_BLE_ADV_TIMER),
+            osTimerOnce, NULL);
+    }
+
+    osTimerStart(app_hfp_audio_closed_delay_resume_ble_adv_timer_id, 
+        HFP_AUDIO_CLOSED_DELAY_RESUME_ADV_IN_MS);
+}
+
 static void hfp_audio_disconnected_handler(hf_chan_handle_t chan, struct hfp_context *ctx)
 {
     log_event_2(EVENT_HFP_SCO_LINK_DISCONNECTED, ctx->remote_dev_hcihandle & 3,
@@ -1050,6 +1108,19 @@ static void hfp_audio_disconnected_handler(hf_chan_handle_t chan, struct hfp_con
     }
 
     app_bt_device.hf_audio_state[chan_id_flag.id] = BTIF_HF_AUDIO_DISCON;
+
+#ifdef IAG_BLE_INCLUDE 
+
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+    switch_to_high_speed_conn_interval();
+#endif
+
+    if (!IS_CONNECTING_MOBILE())
+    {
+        app_hfp_resume_ble_adv();
+    }
+#endif
+    
     app_tws_preparation_for_roleswich_after_hf_audio_disconnection();
     btdrv_dynamic_patch_sco_status_clear();
 #ifdef __BT_ONE_BRING_TWO__
@@ -1112,6 +1183,13 @@ static void hfp_speak_volume_handler(hf_chan_handle_t chan, struct hfp_context *
 #endif
 }
 
+static void hfp_battery_report(hf_chan_handle_t chan, struct hfp_context *ctx)
+{
+    TRACE("report battry level");
+    app_hfp_battery_report_reset(chan_id_flag.id);
+    app_hfp_battery_report(app_battery_current_level());
+}
+
 static void app_hfp_event_callback(hf_chan_handle_t chan, struct hfp_context *ctx)
 {
 #ifdef __BT_ONE_BRING_TWO__
@@ -1123,6 +1201,7 @@ static void app_hfp_event_callback(hf_chan_handle_t chan, struct hfp_context *ct
     switch(ctx->event) {
     case BTIF_HF_EVENT_SERVICE_CONNECTED:
         hfp_connected_ind_handler(chan, ctx);
+        hfp_service_connected_set(true);
         break;
     case BTIF_HF_EVENT_AUDIO_DATA_SENT:
         hfp_audio_data_sent_handler(chan, ctx);
@@ -1132,6 +1211,7 @@ static void app_hfp_event_callback(hf_chan_handle_t chan, struct hfp_context *ct
         break;
     case BTIF_HF_EVENT_SERVICE_DISCONNECTED:
         hfp_disconnected_ind_handler(chan, ctx);
+        hfp_service_connected_set(false);
         break;
     case BTIF_HF_EVENT_CALL_IND:
         hfp_call_ind_handler(chan, ctx);
@@ -1157,6 +1237,9 @@ static void app_hfp_event_callback(hf_chan_handle_t chan, struct hfp_context *ct
     case BTIF_HF_EVENT_SPEAKER_VOLUME:
         hfp_speak_volume_handler(chan, ctx);
         break;
+    case BTIF_HF_EVENT_AT_ACCESSORY_COMPLETE:
+        hfp_battery_report(chan,ctx);
+        break;       
 #ifdef SUPPORT_SIRI
     case BTIF_HF_EVENT_SIRI_STATUS:
         break;

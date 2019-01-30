@@ -23,11 +23,17 @@ extern "C" {
 enum BT_XTAL_SYNC_MODE_T {
     BT_XTAL_SYNC_MODE_MUSIC = 1,
     BT_XTAL_SYNC_MODE_VOICE = 2,
+    BT_XTAL_SYNC_MODE_WITH_MOBILE = 3,
+    BT_XTAL_SYNC_MODE_WITH_TWS = 4,
 };
 
 void bt_xtal_sync(enum BT_XTAL_SYNC_MODE_T mode);
 #ifdef BT_XTAL_SYNC_NEW_METHOD
-void bt_xtal_sync_new(int32_t rxbit);
+typedef struct {
+    float Kp;
+    float Kd;
+}pid_para_t;
+void bt_xtal_sync_new(int32_t rxbit,enum BT_XTAL_SYNC_MODE_T mode);
 #endif
 void bt_init_xtal_sync(enum BT_XTAL_SYNC_MODE_T mode, int range_min, int range_max);
 void bt_term_xtal_sync(bool xtal_term_default);

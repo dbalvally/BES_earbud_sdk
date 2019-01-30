@@ -32,6 +32,7 @@ enum DRV_NORFLASH_ERASE_T {
 };
 
 enum DRV_NORFLASH_W_STATUS_T {
+    DRV_NORFLASH_W_STATUS_INIT,
     DRV_NORFLASH_W_STATUS_QE,
     DRV_NORFLASH_W_STATUS_LB,
 };
@@ -105,7 +106,7 @@ void norflash_reset(void);
 
 int norflash_get_size(uint32_t *total_size, uint32_t *block_size, uint32_t *sector_size, uint32_t *page_size);
 
-int norflash_set_mode(uint32_t op);
+int norflash_set_mode(uint32_t op, int init);
 
 int norflash_pre_operation(void);
 

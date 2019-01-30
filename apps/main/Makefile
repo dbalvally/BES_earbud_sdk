@@ -14,6 +14,7 @@ obj-y := $(obj-y:.S=.o)
 
 ccflags-y +=  \
     -Iservices/bt_app \
+    -Iservices/ota \
     -Iservices/audioflinger \
     -Iservices/nvrecord \
     -Iservices/nv_section/factory_section \
@@ -41,7 +42,11 @@ ccflags-y +=  \
     -Iservices/voicepath/gsound/gsound_target \
     -Iservices/voicepath/gsound \
     -Iservices/tota \
-    -Iservices/nv_section/log_section
+    -Iservices/nv_section/log_section \
+    -Iservices/ai_voice/ama/ama_manager \
+    -Iservices/ai_voice/manager \
+    -Iservices/interconnection
+    
 ifeq ($(VOICE_DATAPATH_ENABLED),1)
 ccflags-y += -Iservices/voicepath/$(VOICE_DATAPATH_TYPE)
 endif
@@ -67,6 +72,11 @@ ifeq ($(MCU_HIGH_PERFORMANCE_MODE),1)
 CFLAGS_apps.o += -DMCU_HIGH_PERFORMANCE_MODE
 endif
 
+ifeq ($(BTADDR_FOR_DEBUG),1)
+CFLAGS_apps.o += -DBTADDR_FOR_DEBUG
+endif
+
 ifeq ($(BT_ONE_BRING_TWO),1)
 ccflags-y += -D__BT_ONE_BRING_TWO__
 endif
+

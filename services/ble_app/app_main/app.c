@@ -50,6 +50,12 @@
 #include "gapm.h"
 
 #include "nvrecord_env.h"
+#include "factory_section.h"
+#ifdef _AMA_
+#include "ai_manager.h"
+#include "app_ama_ble.h"                  // AMA Voice Application Definitions
+#include "app_ama_handle.h"
+#endif
 
 #if (BLE_APP_SEC)
 #include "app_sec.h"                 // Application security Definition
@@ -180,7 +186,10 @@
 #define APP_DATAPATH_SERVER_ADV_DATA_UUID_LEN    (18)
 #endif //(BLE_APP_HT)
 
-
+#ifdef _AMA_
+#define APP_AMA_UUID            "\x03\x16\x03\xFE"
+#define APP_AMA_UUID_LEN        (4)
+#endif
 /**
  * Appearance part of ADV Data
  * --------------------------------------------------------------------------------------
@@ -230,7 +239,10 @@
 #define BISTO_SERVICE_DATA_LEN 6
 #define BISTO_SERVICE_DATA_UUID 0xFE26
 #define DEVICE_MODEL_ID 0x00003E
-
+#ifdef _AMA_
+bool app_ama_is_ble_adv_uuid_enabled(void);
+void bt_drv_restore_ble_control_timing(void);
+#endif
 
 /*
  * TYPE DEFINITIONS
@@ -274,6 +286,9 @@ enum appm_svc_list
     APPM_SVC_BMS,
     #endif
     #endif //(BLE_APP_VOICEPATH)
+	#if (BLE_AMA_VOICE)
+	APPM_AMA_SMARTVOICE,
+	#endif //(BLE_APP_AMA)
     #if (ANCS_PROXY_ENABLE)
     APPM_SVC_ANCSP,
     APPM_SVC_AMSP,
@@ -336,6 +351,9 @@ static const appm_add_svc_func_t appm_add_svc_func_list[APPM_SVC_LIST_STOP] =
     (appm_add_svc_func_t)app_ble_bms_add_svc,
     #endif 
     #endif //(BLE_APP_VOICEPATH)
+	#if (BLE_APP_AMA_VOICE)
+    (appm_add_svc_func_t)app_ama_add_ama,
+	#endif //(BLE_APP_AMA_VOICE)
     #if (ANCS_PROXY_ENABLE)
     (appm_add_svc_func_t)app_ble_ancsp_add_svc,
     (appm_add_svc_func_t)app_ble_amsp_add_svc,
@@ -383,7 +401,7 @@ void appm_init()
 
     // Get the Device Name to add in the Advertising Data (Default one or NVDS one)
 #ifdef _BLE_NVDS_
-    const char* ble_name_in_nv = nvrec_dev_get_ble_name();
+    const char* ble_name_in_nv = (const char*)factory_section_get_ble_name();
 #else
     const char* ble_name_in_nv = BLE_DEFAULT_NAME;
 #endif
@@ -403,6 +421,14 @@ void appm_init()
     nv_record_blerec_get_local_irk(app_env.loc_irk);
 #else
     uint8_t counter;
+
+    //avoid ble irk collision low probability
+    uint32_t generatedSeed = hal_sys_timer_get();
+    for (uint8_t index = 0; index < sizeof(bt_addr); index++)
+    {
+        generatedSeed ^= (((uint32_t)(bt_addr[index])) << (hal_sys_timer_get()&0xF));
+    }
+    srand(generatedSeed);
 
     // generate a new IRK
     for (counter = 0; counter < KEY_LEN; counter++)
@@ -460,6 +486,10 @@ void appm_init()
     // Data Path Server Module
     app_datapath_server_init();
     #endif //(BLE_APP_DATAPATH_SERVER)
+	#if (BLE_APP_AMA_VOICE)
+    // AMA Voice Module
+    app_ama_init();
+	#endif //(BLE_APP_AMA_VOICE)
 
     #if (BLE_APP_OTA)
     // OTA Module
@@ -469,6 +499,10 @@ void appm_init()
     #if (BLE_APP_GFPS)
     app_gfps_init();
     #endif
+
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+    app_init_ble_update_conn_param_state_machine();
+#endif
 
     BLE_APP_FUNC_LEAVE();
 }
@@ -669,10 +703,40 @@ void appm_start_advertising(uint8_t advType, uint8_t advChMap, uint32_t advMaxIn
         cmd->op.code        = advType;
         cmd->info.host.mode = GAP_GEN_DISCOVERABLE;
 
-        cmd->info.host.flags = GAP_LE_GEN_DISCOVERABLE_FLG;
+        cmd->info.host.flags = GAP_LE_GEN_DISCOVERABLE_FLG | GAP_BR_EDR_NOT_SUPPORTED;
         /*-----------------------------------------------------------------------------------
          * Set the Advertising Data and the Scan Response Data
          *---------------------------------------------------------------------------------*/
+#ifdef _AMA_
+    uint8_t avail_space;
+
+    // Scan Response Data
+    cmd->info.host.scan_rsp_data_len = 0;
+    
+	if (app_ama_is_ble_adv_uuid_enabled())
+	{
+		memcpy(&cmd->info.host.scan_rsp_data[cmd->info.host.scan_rsp_data_len],
+		  	APP_AMA_UUID, APP_AMA_UUID_LEN);
+		cmd->info.host.scan_rsp_data_len += APP_AMA_UUID_LEN;
+	}
+	
+    avail_space = (SCAN_RSP_DATA_LEN) - cmd->info.host.scan_rsp_data_len - 2;
+    // Check if data can be added to the Scan response Data
+    if (avail_space > 2)
+    {
+        avail_space = co_min(avail_space, app_env.dev_name_len);
+
+        cmd->info.host.scan_rsp_data[cmd->info.host.scan_rsp_data_len]     = avail_space + 1;
+        // Fill Device Name Flag
+        cmd->info.host.scan_rsp_data[cmd->info.host.scan_rsp_data_len + 1] = (avail_space == app_env.dev_name_len) ? '\x08' : '\x09';
+        // Copy device name
+        memcpy(&cmd->info.host.scan_rsp_data[cmd->info.host.scan_rsp_data_len + 2], app_env.dev_name, avail_space);
+
+        // Update Scan response Data Length
+        cmd->info.host.scan_rsp_data_len += (avail_space + 2);
+    }
+
+#else
         // Flag value is set by the GAP
 
         // Scan Response Data
@@ -784,6 +848,7 @@ void appm_start_advertising(uint8_t advType, uint8_t advChMap, uint32_t advMaxIn
             cmd->info.host.adv_data_len += (avail_space + 2);
         }
         #endif
+#endif //_AMA_
 
 
         LOG_PRINT_BLE("adv data:");
@@ -952,6 +1017,201 @@ void appm_stop_connecting(void)
     BLE_APP_FUNC_LEAVE();
 }
 
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+#define APP_BLE_UPDATE_CONN_PARAM_TRY_TIMES     1
+#define APP_BLE_UPDATE_CONN_PARAM_CHECK_PERIOD_IN_MS    2000
+static void app_ble_update_conn_param_timer_handler(void const *param);
+osTimerDef (APP_BLE_UPDATE_CONN_PARAM_TIMER, app_ble_update_conn_param_timer_handler);
+osTimerId app_ble_update_conn_param_timer = NULL;
+
+#define APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_DURING_CALL   (uint16_t)(300/1.25)
+#define APP_BLE_LOW_SPEED_MAX_CONN_INTVEL_DURING_CALL   (uint16_t)(340/1.25)
+
+#define APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_NORMAL        (uint16_t)(50/1.25)
+#define APP_BLE_LOW_SPEED_MAX_CONN_INTVEL_NORMAL        (uint16_t)(80/1.25)
+
+#define APP_BLE_HIGH_SPEED_MIN_CONN_INTVEL  (uint16_t)(20/1.25)
+#define APP_BLE_HIGH_SPEED_MAX_CONN_INTVEL  (uint16_t)(40/1.25)
+
+#define APP_BLE_UPDATE_CONN_PARAM_IDLE              0
+#define APP_BLE_UPDATE_CONN_PARAM_TO_LOW_SPEED      1
+#define APP_BLE_UPDATE_CONN_PARAM_TO_HIGH_SPEED     2
+static uint8_t app_ble_update_conn_param_times = 0;
+
+static uint8_t app_ble_update_conn_param_op = APP_BLE_UPDATE_CONN_PARAM_IDLE;
+
+static void app_ble_check_conn_param_status_peridically(void);
+
+static void app_ble_update_conn_param_timer_handler(void const *param)
+{
+    app_start_custom_function_in_bt_thread(0, 0, 
+        (uint32_t)app_ble_check_conn_param_status_peridically);
+
+}
+
+void app_init_ble_update_conn_param_state_machine(void)
+{
+    app_ble_update_conn_param_timer = osTimerCreate(
+        osTimer(APP_BLE_UPDATE_CONN_PARAM_TIMER), 
+        osTimerOnce, NULL);
+}
+
+void app_ble_stop_update_conn_param_op(void)
+{
+    app_ble_update_conn_param_times = 0;
+    app_ble_update_conn_param_op = APP_BLE_UPDATE_CONN_PARAM_IDLE;
+    osTimerStop(app_ble_update_conn_param_timer);
+}
+
+static void switch_to_low_speed_conn_interval_handler_in_bt_thread(void)
+{
+    if (APP_BLE_UPDATE_CONN_PARAM_TO_LOW_SPEED != app_ble_update_conn_param_op)
+    {
+        app_ble_update_conn_param_times = 0;
+        app_ble_update_conn_param_op = APP_BLE_UPDATE_CONN_PARAM_TO_LOW_SPEED;
+        
+        osTimerStart(app_ble_update_conn_param_timer, APP_BLE_UPDATE_CONN_PARAM_CHECK_PERIOD_IN_MS);
+    }
+    else
+    {
+        if (app_ble_update_conn_param_times >= APP_BLE_UPDATE_CONN_PARAM_TRY_TIMES)
+        {
+            app_ble_stop_update_conn_param_op();
+        }
+        else
+        {
+            app_ble_update_conn_param_times++;
+            struct gapc_conn_param conn_param;
+
+            if (btapp_hfp_is_sco_active())
+            {
+                conn_param.intv_min = APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_DURING_CALL; 
+                conn_param.intv_max = APP_BLE_LOW_SPEED_MAX_CONN_INTVEL_DURING_CALL; 
+            }
+            else
+            {
+                conn_param.intv_min = APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_NORMAL; 
+                conn_param.intv_max = APP_BLE_LOW_SPEED_MAX_CONN_INTVEL_NORMAL; 
+            }
+            conn_param.latency	= 0;
+            conn_param.time_out = 6000/10; 
+
+            for (uint8_t index = 0;index < BLE_CONNECTION_MAX;index++)
+            {
+                if (app_env.context[index].isConnected)
+                {
+                    l2cap_update_param(index, &conn_param);
+                }
+            }
+
+            osTimerStart(app_ble_update_conn_param_timer, APP_BLE_UPDATE_CONN_PARAM_CHECK_PERIOD_IN_MS);
+        }
+    }
+}
+
+void app_ble_update_conn_param_op_status(uint16_t updatedConnInterval)
+{
+    uint8_t isBleUpdateConnParamFinished = false;
+    if (APP_BLE_UPDATE_CONN_PARAM_TO_LOW_SPEED == app_ble_update_conn_param_op)
+    {
+        if (btapp_hfp_is_sco_active())
+        {
+            if (updatedConnInterval >= APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_DURING_CALL)
+            {
+                isBleUpdateConnParamFinished = true;
+            }
+        }
+        else    if (updatedConnInterval >= APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_NORMAL)
+        {
+            isBleUpdateConnParamFinished = true;
+        }
+    }
+    else if (APP_BLE_UPDATE_CONN_PARAM_TO_HIGH_SPEED == app_ble_update_conn_param_op)
+    {
+        if (updatedConnInterval <= APP_BLE_HIGH_SPEED_MAX_CONN_INTVEL)
+        {
+            isBleUpdateConnParamFinished = true;
+        }
+    }
+    else
+    {
+        if (btapp_hfp_is_sco_active())
+        {            
+            if (updatedConnInterval < APP_BLE_LOW_SPEED_MIN_CONN_INTVEL_DURING_CALL)
+            {
+                switch_to_low_speed_conn_interval_handler_in_bt_thread();
+            }
+        }
+    }
+
+    if (isBleUpdateConnParamFinished)
+    {
+        app_ble_stop_update_conn_param_op();
+    }
+}
+
+void switch_to_low_speed_conn_interval(void)
+{
+    app_start_custom_function_in_bt_thread(0, 0, 
+        (uint32_t)switch_to_low_speed_conn_interval_handler_in_bt_thread);
+}
+
+void switch_to_high_speed_conn_interval_handler_in_bt_thread(void)
+{
+    if (APP_BLE_UPDATE_CONN_PARAM_TO_HIGH_SPEED != app_ble_update_conn_param_op)
+    {
+        app_ble_update_conn_param_times = 0;
+        app_ble_update_conn_param_op = APP_BLE_UPDATE_CONN_PARAM_TO_HIGH_SPEED;
+        
+        osTimerStart(app_ble_update_conn_param_timer, APP_BLE_UPDATE_CONN_PARAM_CHECK_PERIOD_IN_MS);
+    }
+    else
+    {
+        if (app_ble_update_conn_param_times >= APP_BLE_UPDATE_CONN_PARAM_TRY_TIMES)
+        {
+            app_ble_stop_update_conn_param_op();
+        }
+        else
+        {
+            app_ble_update_conn_param_times++;
+            struct gapc_conn_param conn_param;
+
+            conn_param.intv_min = APP_BLE_HIGH_SPEED_MIN_CONN_INTVEL; 
+            conn_param.intv_max = APP_BLE_HIGH_SPEED_MAX_CONN_INTVEL; 
+            conn_param.latency  = 0;
+            conn_param.time_out = 6000/10; 
+
+            for (uint8_t index = 0;index < BLE_CONNECTION_MAX;index++)
+            {
+                if (app_env.context[index].isConnected)
+                {
+                    l2cap_update_param(index, &conn_param);
+                }
+            }
+
+            osTimerStart(app_ble_update_conn_param_timer, APP_BLE_UPDATE_CONN_PARAM_CHECK_PERIOD_IN_MS);
+        }
+    }
+}
+
+void switch_to_high_speed_conn_interval(void)
+{
+    app_start_custom_function_in_bt_thread(0, 0, 
+        (uint32_t)switch_to_high_speed_conn_interval_handler_in_bt_thread);
+}
+
+static void app_ble_check_conn_param_status_peridically(void)
+{
+    if (APP_BLE_UPDATE_CONN_PARAM_TO_LOW_SPEED == app_ble_update_conn_param_op)
+    {
+        switch_to_low_speed_conn_interval_handler_in_bt_thread();
+    }
+    else if (APP_BLE_UPDATE_CONN_PARAM_TO_HIGH_SPEED == app_ble_update_conn_param_op)
+    {
+        switch_to_high_speed_conn_interval_handler_in_bt_thread();
+    }
+}
+#endif
 
 void appm_update_param(uint8_t conidx, struct gapc_conn_param *conn_param)
 {
@@ -979,7 +1239,6 @@ void appm_update_param(uint8_t conidx, struct gapc_conn_param *conn_param)
 void l2cap_update_param(uint8_t conidx, struct gapc_conn_param *conn_param)
 {
     BLE_APP_FUNC_ENTER();
-    app_env.context[conidx].isToRejectConnParamUpdateReqFromPeerDev = false;
     
     struct l2cc_update_param_req *req = L2CC_SIG_PDU_ALLOC(conidx, L2C_CODE_CONN_PARAM_UPD_REQ,
                                                    KE_BUILD_ID(TASK_GAPC, conidx), l2cc_update_param_req);
@@ -990,6 +1249,8 @@ void l2cap_update_param(uint8_t conidx, struct gapc_conn_param *conn_param)
     {
         pkt_id = 1;
     }
+
+    LOG_PRINT_BLE("update parame interval to %d", conn_param->intv_max);
 
     /* fill up the parameters */
     req->intv_max = conn_param->intv_max;

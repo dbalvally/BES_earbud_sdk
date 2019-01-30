@@ -46,15 +46,12 @@ const char BUILD_INFO_LOCATION sys_build_info[] =
     NEW_LINE_STR "FLASH_BASE=" TO_STR(FLASH_NC_BASE)
     NEW_LINE_STR "FLASH_SIZE=" TO_STR(FLASH_SIZE)
     NEW_LINE_STR "NV_REC_DEV_VER=" TO_STR(NV_REC_DEV_VER)
-
+	NEW_LINE_STR "CRC32_OF_IMAGE=0x00000000"
     //--------------------
     // Add new items above
     //--------------------
     NEW_LINE_STR "BUILD_DATE=" __DATE__   " "   __TIME__
     NEW_LINE_STR "REV_INFO=" TO_STR(REVISION_INFO)
-#ifdef CRC32_OF_IMAGE
-    NEW_LINE_STR "CRC32_OF_IMAGE=00000000"
-#endif
     ;
 #endif
 

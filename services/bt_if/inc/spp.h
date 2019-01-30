@@ -22,6 +22,11 @@
 #include "cqueue.h"
 #include "rfcomm_api.h"
 
+
+#define spp_malloc malloc
+
+#define spp_free free
+
 /*---------------------------------------------------------------------------
  * Serial Port Profile (SPP) layer
  *
@@ -182,6 +187,8 @@ struct spp_client {
     btif_remote_device_t *remDev;
     uint8_t                  serverId;
     sdp_query_token       *sdpToken;
+    uint8_t* rfcommServiceSearchRequestPtr;
+    uint8_t rfcommServiceSearchRequestLen;
 };
 #endif
 
@@ -272,7 +279,9 @@ struct spp_device {
 	osThreadId      reader_thread_id;
 	spp_mutex_t     spp_mutex;
 	CQueue          rx_queue;
-	uint8_t         *rx_buffer;
+    uint8_t         *rx_buffer;
+    uint32_t         rx_buffer_size;
+    uint8_t         *tx_buffer;
 	struct _spp_dev sppDev;
     void            *priv;   /*used by the application code for context use*/
 };

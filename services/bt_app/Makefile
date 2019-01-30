@@ -9,6 +9,9 @@ ifeq ($(VOICE_DATAPATH_TYPE),gsound)
 obj_cpp += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)/app_voice/app_$(VOICE_DATAPATH_TYPE)/*.cpp))
 endif
 
+ifeq ($(AMA_VOICE),1)
+obj_cpp += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)/app_voice/app_bt_ama/*.cpp))
+endif
 obj-y := $(obj_c:.c=.o) $(obj_s:.S=.o) $(obj_cpp:.cpp=.o)
 
 
@@ -77,9 +80,17 @@ ccflags-y += \
 	-Iservices/nvrecord \
 	-Iservices/ble_app/app_tws \
 	-Iservices/voicepath \
+	-Iservices/ota \
 	-Iservices/ble_app/app_gfps \
 	-Iapps/battery \
-	-Ithirdparty/audio_codec_lib/liblhdc-dec/inc
+	-Ithirdparty/audio_codec_lib/liblhdc-dec/inc \
+	-Iservices/ai_voice/audio_stream \
+	-Iservices/ai_voice/ama/ama_manager \
+	-Iservices/ai_voice/manager \
+	-Iservices/bt_profiles/ \
+	-Iservices/bt_profiles/inc \
+	-Iservices/bt_if/inc \
+	-Iservices/bt_app \
 
 CFLAGS_app_bt_stream.o += -DAUDIO_OUTPUT_VOLUME_DEFAULT=$(AUDIO_OUTPUT_VOLUME_DEFAULT)
 
@@ -99,6 +110,8 @@ endif
 ifeq ($(AUDIO_QUEUE_SUPPORT),1)
 CFLAGS_app_bt_media_manager.o += -D__AUDIO_QUEUE_SUPPORT__
 endif
+
+CFLAGS_besmain.o += -DBUILD_HOSTNAME=$(BUILD_HOSTNAME) -DBUILD_USERNAME=$(BUILD_USERNAME)
 
 ifeq ($(BTADDR_GEN),1)
 CFLAGS_besmain.o += -DRANDOM_BTADDR_GEN

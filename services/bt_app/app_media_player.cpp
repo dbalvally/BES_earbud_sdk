@@ -418,6 +418,16 @@ void media_Play_init_audio(APP_AUDIO_STATUS* data)
             g_app_audio_data = (g_language==MEDIA_DEFAULT_LANGUAGE)?(U8*)EN_BT_WARNING: (U8*)CN_BT_WARNING;
             g_app_audio_length = (g_language==MEDIA_DEFAULT_LANGUAGE)?sizeof(EN_BT_WARNING): sizeof(CN_BT_WARNING);         
             break;
+#ifdef _AMA_
+        case AUDIO_ID_BT_ALEXA_START:
+            g_app_audio_data = (g_language==MEDIA_DEFAULT_LANGUAGE)?(U8*)EN_BT_ALEXA_START: (U8*)CN_BT_ALEXA_START;
+            g_app_audio_length = (g_language==MEDIA_DEFAULT_LANGUAGE)?sizeof(EN_BT_ALEXA_START): sizeof(CN_BT_ALEXA_START);         
+            break;
+        case AUDIO_ID_BT_ALEXA_STOP:
+            g_app_audio_data = (g_language==MEDIA_DEFAULT_LANGUAGE)?(U8*)EN_BT_ALEXA_STOP: (U8*)CN_BT_ALEXA_STOP;
+            g_app_audio_length = (g_language==MEDIA_DEFAULT_LANGUAGE)?sizeof(EN_BT_ALEXA_STOP): sizeof(CN_BT_ALEXA_STOP);         
+            break;
+#endif
         case AUDIO_ID_BT_GSOUND_MIC_OPEN:
             g_app_audio_data = (g_language==MEDIA_DEFAULT_LANGUAGE)?(U8*)EN_BT_GSOUND_MIC_OPEN: (U8*)CN_BT_GSOUND_MIC_OPEN;
             g_app_audio_length = (g_language==MEDIA_DEFAULT_LANGUAGE)?sizeof(EN_BT_GSOUND_MIC_OPEN): sizeof(CN_BT_GSOUND_MIC_OPEN);

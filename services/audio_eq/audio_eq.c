@@ -29,6 +29,7 @@
 #include "stdbool.h"
 #include "hal_location.h"
 #include "hw_codec_iir_process.h"
+#include "audio_cfg.h"
 
 #ifdef __PC_CMD_UART__
 #include "hal_cmd.h"
@@ -277,16 +278,27 @@ int audio_eq_open(enum AUD_SAMPRATE_T sample_rate, enum AUD_BITS_T sample_bits, 
 #endif
 
         hw_codec_iir_open(sample_rate_hw_iir,HW_CODEC_IIR_DAC);
- #ifdef AUDIO_EQ_IIR_DYNAMIC
-    if (audio_eq.iir_cfg.num)
-    {
-        hw_iir_cfg = hw_codec_iir_get_cfg(sample_rate_hw_iir, HW_CODEC_IIR_DAC, 0, &(audio_eq.iir_cfg));        
-    }
-    else
+
+#ifdef AUDIO_EQ_IIR_DYNAMIC
+
+#ifdef AUDIO_SECTION_ENABLE
+        const IIR_CFG_T *iir_cfg_from_audio_section = (const IIR_CFG_T *)load_audio_cfg_from_audio_section(AUDIO_PROCESS_TYPE_IIR_EQ);
+        if (iir_cfg_from_audio_section)
+        {
+            // iir_cfg = iir_cfg_from_audio_section;
+            memcpy(&audio_eq.iir_cfg, iir_cfg_from_audio_section, sizeof(IIR_CFG_T));
+        }
 #endif
-    {
-        hw_iir_cfg = hw_codec_iir_get_cfg(sample_rate_hw_iir, HW_CODEC_IIR_DAC, 0, NULL);        
-    }
+
+        if (audio_eq.iir_cfg.num)
+        {
+            hw_iir_cfg = hw_codec_iir_get_cfg(sample_rate_hw_iir, HW_CODEC_IIR_DAC, 0, &(audio_eq.iir_cfg));        
+        }
+        else
+#endif
+        {
+            hw_iir_cfg = hw_codec_iir_get_cfg(sample_rate_hw_iir, HW_CODEC_IIR_DAC, 0, NULL);        
+        }
         ASSERT(hw_iir_cfg != NULL, "[%s] %d codec IIR parameter error!", __func__, hw_iir_cfg);         
         hw_codec_iir_set_cfg(hw_iir_cfg, sample_rate_hw_iir, HW_CODEC_IIR_DAC);            
     }
@@ -462,17 +474,53 @@ int audio_cmd_callback(uint8_t *buf, uint32_t len)
     return 0;
 }
 
+#ifdef AUDIO_SECTION_ENABLE
+int audio_cfg_burn_callback(uint8_t *buf, uint32_t  len)
+{
+    TRACE("[%s] len = %d, sizeof(struct) = %d", __func__, len, sizeof_audio_cfg());
+
+    if (len != sizeof_audio_cfg())
+    {
+        return 1;
+    }
+
+    int res = 0;
+    res = store_audio_cfg_into_audio_section((AUDIO_CFG_T *)buf);
+
+    if(res)
+    {
+        TRACE("[%s] ERROR: res = %d", __func__, res);
+        res += 100;
+    }
+    else
+    {
+        TRACE("[%s] Store audio cfg into audio section!!!", __func__);
+    }
+
+    return res;
+}
+#endif
+
 int audio_eq_init(void)
 {
 #ifdef __PC_CMD_UART__
     hal_cmd_init();
 #ifdef AUDIO_EQ_IIR_DYNAMIC
     hal_cmd_register("iir_eq", audio_eq_iir_callback);
+    hal_cmd_register("sw_iir_eq", audio_eq_iir_callback);
+    hal_cmd_register("dac_iir_eq", audio_eq_iir_callback);
+    hal_cmd_register("hw_iir_eq", audio_eq_iir_callback);
 #endif
 
 #ifdef AUDIO_EQ_FIR_DYNAMIC
     hal_cmd_register("fir_eq", audio_eq_fir_callback);
 #endif
+
+#ifdef AUDIO_SECTION_ENABLE
+    hal_cmd_register("burn", audio_cfg_burn_callback);
+    hal_cmd_register("audio_burn", audio_cfg_burn_callback);
+#endif
+
     hal_cmd_register("cmd", audio_cmd_callback);
 
     hal_cmd_register("ping", audio_tool_ping_callback);

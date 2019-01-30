@@ -429,7 +429,7 @@ void bt_drv_reg_op_set_tpoll(uint8_t linkid,uint16_t poll_interval)
 {
 }
 
-uint8_t  bt_drv_rssi_correction(uint8_t rssi)
+int8_t  bt_drv_rssi_correction(int8_t rssi)
 {
     return 0;
 }

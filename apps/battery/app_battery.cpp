@@ -187,15 +187,6 @@ static void app_battery_event_process(enum APP_BATTERY_STATUS_T status, APP_BATT
     msg.msg_body.message_id = app_battevt;
     msg.msg_body.message_ptr = (uint32_t)NULL;
     app_mailbox_put(&msg);
-    
-#if defined __TWS_GET_SLAVE_MOBILE_RSSI__
-#ifdef CHIP_BEST2300
-    if(hal_get_chip_metal_id() >= HAL_CHIP_METAL_ID_5)
-    {
-         app_tws_get_tws_slave_mobile_rssi();
-    }
-#endif 
-#endif
 }
 
 #if defined(__TWS_PAIR_DIRECTLY__) && defined(__TWS_ROLE_SWITCH__) && defined(__ENABLE_ROLE_SWITCH_FOR_BATTERY_BALANCE__)

@@ -42,13 +42,12 @@ static btif_cmgr_handler_t *app_factorymode_cmgrHandler;
 
 static void app_factorymode_bt_inquiry_buff_update(void)
 {
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
-
-    if(factory_section_data)
+	uint8_t* btAddr = factory_section_get_bt_address();
+    if(btAddr)
     {
-        memcpy((void *)&inquiry_buff[1], factory_section_data->bt_address,BTIF_BD_ADDR_SIZE);
+        memcpy((void *)&inquiry_buff[1], btAddr, BTIF_BD_ADDR_SIZE);
         LOG_PRINT_APPS_DUMP8("0x%02x ", &inquiry_buff[2], BTIF_BD_ADDR_SIZE);
-    }
+    }	
 }
 
 static void app_factorymode_CmgrCallback(btif_cmgr_handler_t *cHandler,
@@ -114,7 +113,8 @@ void app_factorymode_bt_init_connect(void)
 
 void app_factorymode_bt_signalingtest(APP_KEY_STATUS *status, void *param)
 {
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
+	uint8_t* btName = factory_section_get_bt_name();
+	uint8_t* btAddr = factory_section_get_bt_address();
     APP_FACTORY_TRACE("%s",__func__);
 #ifdef __WATCHER_DOG_RESET__
     app_wdt_close();
@@ -142,8 +142,8 @@ void app_factorymode_bt_signalingtest(APP_KEY_STATUS *status, void *param)
     btdrv_feature_default();
 //    btdrv_test_mode_addr_set();
 
-    if (factory_section_data){
-        btdrv_write_localinfo((char *)factory_section_data->device_name, strlen((char *)(factory_section_data->device_name)) + 1, factory_section_data->bt_address);
+    if (btName && btAddr){
+        btdrv_write_localinfo((char *)btName, strlen((char *)btName) + 1, btAddr);
     }
 
     btdrv_enable_dut();
@@ -152,7 +152,8 @@ void app_factorymode_bt_signalingtest(APP_KEY_STATUS *status, void *param)
 
 void app_factorymode_bt_txtest(APP_KEY_STATUS *status, void *param)
 {
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
+	uint8_t* btName = factory_section_get_bt_name();
+	uint8_t* btAddr = factory_section_get_bt_address();
     APP_FACTORY_TRACE("%s",__func__);
 #ifdef __WATCHER_DOG_RESET__
     app_wdt_close();
@@ -179,8 +180,8 @@ void app_factorymode_bt_txtest(APP_KEY_STATUS *status, void *param)
 #endif
     btdrv_feature_default();
 //    btdrv_test_mode_addr_set();
-    if (factory_section_data){
-        btdrv_write_localinfo((char *)factory_section_data->device_name, strlen((char *)(factory_section_data->device_name)) + 1, factory_section_data->bt_address);
+    if (btName && btAddr){
+        btdrv_write_localinfo((char *)btName, strlen((char *)btName) + 1, btAddr);
     }
 
   //  btdrv_enable_dut();
@@ -193,7 +194,8 @@ int app_battery_stop(void);
 
 void app_factorymode_bt_bridgemode(APP_KEY_STATUS *status, void *param)
 {
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
+    uint8_t* btName = factory_section_get_bt_name();
+	uint8_t* btAddr = factory_section_get_bt_address();
     APP_FACTORY_TRACE("%s",__func__);
 #ifdef __WATCHER_DOG_RESET__
     app_wdt_close();
@@ -214,8 +216,8 @@ void app_factorymode_bt_bridgemode(APP_KEY_STATUS *status, void *param)
 #else    
     btdrv_sleep_config(0);
     btdrv_feature_default();
-    if (factory_section_data){
-        btdrv_write_localinfo((char *)factory_section_data->device_name, strlen((char *)(factory_section_data->device_name)) + 1, factory_section_data->bt_address);
+    if (btName && btAddr){
+        btdrv_write_localinfo((char *)btName, strlen((char *)(btName)) + 1, btAddr);
     }
 #ifdef CHIP_BEST2300    
 #ifndef __HW_AGC__
@@ -244,7 +246,8 @@ void app_factorymode_bt_bridgemode(APP_KEY_STATUS *status, void *param)
 
 void app_factorymode_bt_nosignalingtest(APP_KEY_STATUS *status, void *param)
 {
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
+    uint8_t* btName = factory_section_get_bt_name();
+	uint8_t* btAddr = factory_section_get_bt_address();
     APP_FACTORY_TRACE("%s",__func__);
 #ifdef __WATCHER_DOG_RESET__
     app_wdt_close();
@@ -269,8 +272,8 @@ void app_factorymode_bt_nosignalingtest(APP_KEY_STATUS *status, void *param)
 #endif
     btdrv_feature_default();
 
-    if (factory_section_data){
-        btdrv_write_localinfo((char *)factory_section_data->device_name, strlen((char *)(factory_section_data->device_name)) + 1, factory_section_data->bt_address);
+    if (btName && btAddr){
+        btdrv_write_localinfo((char *)btName, strlen((char *)(btName)) + 1, btAddr);
     }
     bt_drv_check_calib();
     btdrv_hcioff();

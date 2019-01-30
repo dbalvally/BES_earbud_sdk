@@ -380,6 +380,22 @@ struct IRQ_STACK_FRAME_T {
 
 extern uint32_t __StackTop[];
 
+static inline uint32_t get_IPSR(void)
+{
+  uint32_t result;
+
+  asm volatile ("MRS %0, ipsr" : "=r" (result) );
+  return(result);
+}
+
+static inline uint32_t get_PSP(void)
+{
+  uint32_t result;
+
+  asm volatile ("MRS %0, psp" : "=r" (result) );
+  return(result);
+}
+
 struct IRQ_STACK_FRAME_T *_rtx_get_irq_stack_frame(P_TCB tcb)
 {
     uint32_t sp;
@@ -387,43 +403,27 @@ struct IRQ_STACK_FRAME_T *_rtx_get_irq_stack_frame(P_TCB tcb)
     if (tcb == NULL) {
         return NULL;
     }
+    if (tcb == os_tsk.run && get_IPSR() == 0) {
+        return NULL;
+    }
     if (tcb == os_tsk.run) {
+        sp = get_PSP();
+    } else {
+        sp = tcb->tsk_stack;
+    }
+    if ((sp & 3) || !hal_trace_address_writable(sp)) {
         return NULL;
     }
-    sp = tcb->tsk_stack;
-    if (sp & 0x03) {
-        return NULL;
-    }
-    if (sp >= RAM_BASE && (sp < RAM_BASE + RAM_SIZE ||
-            // RAM_SIZE might be defined as another value for lds file
-            ((uint32_t)__StackTop - RAM_BASE <= 0x400000 && sp < (uint32_t)__StackTop))) {
-        goto _addr_valid;
-    }
-#ifdef RAMRET_BASE
-    if (sp >= RAMRET_BASE && sp < RAMRET_BASE + RAMRET_SIZE) {
-        goto _addr_valid;
-    }
-#endif
-#ifdef PSRAM_BASE
-    if (sp >= PSRAM_BASE && sp < PSRAM_BASE + 0x400000) {
-        goto _addr_valid;
-    }
-#endif
-#ifdef PSRAM_NC_BASE
-    if (sp >= PSRAM_NC_BASE && sp < PSRAM_NC_BASE + 0x400000) {
-        goto _addr_valid;
-    }
-#endif
 
-    return NULL;
-
-_addr_valid:
-    // r4-r11
-    sp += 4 * 8;
-    if (tcb->stack_frame) {
-        // s16-s31
-        sp += 4 * 16;
+    if (tcb != os_tsk.run) {
+        // r4-r11
+        sp += 4 * 8;
+        if (tcb->stack_frame) {
+            // s16-s31
+            sp += 4 * 16;
+        }
     }
+
     return (struct IRQ_STACK_FRAME_T *)sp;
 }
 
@@ -460,29 +460,21 @@ static void _rtx_show_thread(P_TCB tcb)
 #endif
             frame = _rtx_get_irq_stack_frame(tcb);
             if (frame) {
+                uint32_t stack_end;
+                uint32_t search_cnt, print_cnt;
+
                 TRACE_HIGHPRIO("    PC=0x%08X LR=0x%08X", frame->pc, frame->lr);
-            }
-            {
-                uint32_t *chk_start, *chk_end, *chk_curr;
-                chk_end = (uint32_t *)(tcb->stack) + (tcb->priv_stack/4);
-                chk_start = (uint32_t *)(tcb->tsk_stack);
-                TRACE_HIGHPRIO_IMM("");
-                TRACE_HIGHPRIO_IMM("--- BackTrace start");
-                TRACE_HIGHPRIO("BackTrace %08x~%08x", chk_start, chk_end);
-                for (chk_curr = chk_start; chk_curr < chk_end; chk_curr++) {
-                    if (((*chk_curr & 0xfc000000) == 0x0c000000)||
-                        ((*chk_curr & 0xfc000000) == 0x00000000)){
-                        if (*chk_curr == frame->pc){
-                            TRACE_HIGHPRIO("PC:%08x", *chk_curr);
-                        }else if (*chk_curr == frame->lr){
-                            TRACE_HIGHPRIO("LR:%08x", *chk_curr);
-                        }else if (*chk_curr){
-                            TRACE_HIGHPRIO("%08x", *chk_curr);
-                        }
+
+                stack_end = (uint32_t)tcb->stack + tcb->priv_stack;
+                if (stack_end > tcb->tsk_stack) {
+                    search_cnt = (stack_end - tcb->tsk_stack) / 4;
+                    if (search_cnt > 512) {
+                        search_cnt = 512;
                     }
+                    print_cnt = 10;
+                    hal_trace_print_backtrace(tcb->tsk_stack, search_cnt, print_cnt);
                 }
-                TRACE_HIGHPRIO("--- BackTrace end");
-            }            
+            }
         } else {
             TRACE_HIGHPRIO("--- Task BAD");
         }

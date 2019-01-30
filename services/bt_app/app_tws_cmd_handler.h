@@ -70,6 +70,9 @@ typedef enum
 	APP_TWS_CMD_CTRL_ANC_NOTIFY_STATUS,
 	APP_TWS_CMD_CTRL_ANC_GET_STATUS
 */	
+#ifdef BES_OTA_TWS
+	APP_TWS_CMD_TWS_OTA_DATA = 0x80AA,
+#endif
 } APP_TWS_CMD_CODE_E;
 
 typedef void (*app_tws_cmd_handler_t)(uint8_t* ptrParam, uint32_t paramLen);
@@ -104,6 +107,10 @@ bool app_tws_send_cmd_with_rsp(uint16_t cmdCode, uint8_t *pDataBuf, uint16_t dat
 void data_from_peer_tws_received(uint8_t* data, uint16_t dataLen);
 bool app_tws_force_send_cmd_without_rsp(uint16_t cmdCode, uint8_t *pDataBuf, uint16_t dataLength);
 BOOL is_cmd_in_not_exit_sniff_list(uint16_t cmd_code);
+
+#ifdef BES_OTA_TWS
+bool ota_tws_transfer_data(uint8_t *pDataBuf, uint16_t dataLength);
+#endif
 
 #ifdef __cplusplus
     }

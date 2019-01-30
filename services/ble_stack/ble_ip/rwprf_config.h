@@ -26,6 +26,10 @@
 #define CFG_VOICEPATH
 #endif
 
+#if defined (__AMA_VOICE__)
+#define CFG_AMA_VOICE
+#endif
+
 #ifdef BES_OTA_ENABLED
 #define CFG_OTA
 #endif
@@ -368,6 +372,13 @@
 #else
 #define BLE_VOICEPATH			0
 #endif	// defined(CFG_VOICEPATH)
+
+#if defined(CFG_AMA_VOICE)
+#define BLE_AMA_VOICE			1
+#else
+#define BLE_AMA_VOICE			0
+#endif
+
 /// Data Path Service Server Role
 #if defined(CFG_PRF_DATAPATH_SERVER)
 #define BLE_DATAPATH_SERVER          1
@@ -413,7 +424,7 @@
         || BLE_BATT_CLIENT || BLE_GL_COLLECTOR || BLE_HID_BOOT_HOST || BLE_HID_REPORT_HOST \
         || BLE_RSC_COLLECTOR || BLE_CSC_COLLECTOR || BLE_CP_COLLECTOR || BLE_LN_COLLECTOR || BLE_AN_CLIENT \
         || BLE_PAS_CLIENT || BLE_IPS_CLIENT || BLE_ENV_CLIENT || BLE_WSC_CLIENT \
-        || BLE_UDS_CLIENT || BLE_BCS_CLIENT || BLE_DATAPATH_SERVER || BLE_VOICEPATH || BLE_ANC_CLIENT || BLE_BMS || BLE_OTA)
+        || BLE_UDS_CLIENT || BLE_BCS_CLIENT || BLE_DATAPATH_SERVER || BLE_VOICEPATH || BLE_ANC_CLIENT || BLE_BMS || BLE_OTA||BLE_AMA_VOICE)
 #define BLE_CLIENT_PRF          1
 #else
 #define BLE_CLIENT_PRF          0

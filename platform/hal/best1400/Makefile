@@ -24,6 +24,8 @@ ifeq ($(JTAG_RESET_PIN),1)
 IOMUX_CFG_FLAGS += -DJTAG_RESET_PIN
 endif
 
+CFLAGS_hal_analogif_best1400.o += $(ANAIF_CFG_FLAGS)
+
 CFLAGS_hal_cmu_best1400.o += $(CMU_CFG_FLAGS)
 
 CFLAGS_hal_codec_best1400.o += $(CODEC_CFG_FLAGS)

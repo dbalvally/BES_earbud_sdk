@@ -24,6 +24,8 @@ extern "C" {
 
 uint32_t analog_aud_get_max_dre_gain(void);
 
+int analog_debug_config_vad_mic(bool enable);
+
 void analog_aud_codec_vad_open(void);
 void analog_aud_codec_vad_close(void);
 void analog_aud_codec_vad_enable(bool enable);

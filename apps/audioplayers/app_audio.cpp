@@ -39,7 +39,7 @@
 //This buff is used as queue
 #if (RAM_SIZE >= 0x40000)
 #define APP_AUDIO_BUFFER_SIZE (1024 * 45)
-#if defined(AUDIO_ANC_FB_MC) && defined(ANC_APP) && !defined(__AUDIO_RESAMPLE__)
+#if (defined(AUDIO_ANC_FB_MC) && defined(ANC_APP) && !defined(__AUDIO_RESAMPLE__)) || defined(_AMA_)
 #define APP_AUDIO_BUFFER_REQUEST (1024 * 140)
 #else
 #define APP_AUDIO_BUFFER_REQUEST (1024 * 70)
@@ -59,6 +59,8 @@
 //#if VOB_ENCODING_ALGORITHM==ENCODING_ALGORITHM_OPUS
 #if defined(VOB_ENCODING_ALGORITHM) && (VOB_ENCODING_ALGORITHM == 3)
 #define APP_CAPTURE_AUDIO_BUFFER_SIZE   (43*1024)
+#elif defined(VOB_ENCODING_ALGORITHM) && (VOB_ENCODING_ALGORITHM == 2)
+#define APP_CAPTURE_AUDIO_BUFFER_SIZE   (70*1024)
 #else
 #define APP_CAPTURE_AUDIO_BUFFER_SIZE   (19*1024)
 #endif

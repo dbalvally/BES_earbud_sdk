@@ -156,6 +156,17 @@ const U8 EN_BT_TWS_RIGHTCHNL[] = {
 };
 
 #endif  
+
+#ifdef _AMA_
+const U8 EN_BT_ALEXA_START[] = {
+#include "res/en/SOUND_ALEXA_START.txt"
+};
+
+const U8 EN_BT_ALEXA_STOP[] = {
+#include "res/en/SOUND_ALEXA_STOP.txt"
+};
+#endif
+
 const U8 EN_BT_GSOUND_MIC_OPEN[] = {
 #include "res/en/SOUND_GSOUND_MIC_OPEN.txt"
 };

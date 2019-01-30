@@ -812,6 +812,9 @@ extern "C" {
 
     uint8_t btif_me_get_ext_inq_data(uint8_t * eir, btif_eir_data_type_t type,
                                      uint8_t * outBuffer, uint8_t Length);
+
+    uint8_t btif_me_get_callback_event_rssi(const btif_event_t * event);
+    
     bt_status_t btif_me_cancel_inquiry(void);
 
     bt_status_t btif_sec_delete_device_record(const bt_bdaddr_t * bdAddr);

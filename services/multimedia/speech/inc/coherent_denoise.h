@@ -27,7 +27,9 @@ typedef struct {
     float       left_gain;              // MIC Left增益补偿
     float       right_gain;             // MIC Right增益补偿
     int32_t     delay_taps;             // MIC L/R delay samples. 0: 适用于麦克距离为<2cm; 1: 适用于麦克距离为2cm左右; 2: 适用于麦克距离为4cm左右
-    int32_t     freq_smooth_enable;     // 1: 频域滤波打开; 0: 频域滤波关闭; 默认打开
+	float		msbc_taps;
+	float		cvsd_taps;
+	int32_t     freq_smooth_enable;     // 1: 频域滤波打开; 0: 频域滤波关闭; 默认打开
     int32_t     wnr_enable;             // wind noise reduction enable
 } CoherentDenoiseConfig;
 

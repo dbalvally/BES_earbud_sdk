@@ -61,6 +61,7 @@
 #include "rt_Mailbox.h"
 #include "rt_MemBox.h"
 #include "rt_HAL_CM.h"
+#include "hal_timer.h"
 
 #define os_thread_cb OS_TCB
 
@@ -419,7 +420,7 @@ SVC_0_1(svcKernelRunning,    int32_t,  RET_int32_t)
 
 extern void  sysThreadError   (osStatus status);
 osThreadId   svcThreadCreate  (osThreadDef_t *thread_def, void *argument);
-osMessageQId svcMessageCreate (osMessageQDef_t *queue_def, osThreadId thread_id);
+osMessageQId svcMessageCreate (const osMessageQDef_t *queue_def, osThreadId thread_id);
 
 // Kernel Control Service Calls
 
@@ -777,7 +778,7 @@ typedef struct os_timer_cb_ {                   // Timer Control Block
   uint16_t             tcnt;                    // Timer Delay Count
   uint16_t             icnt;                    // Timer Initial Count
   void                 *arg;                    // Timer Function Argument
-  osTimerDef_t       *timer;                    // Pointer to Timer definition
+  const osTimerDef_t *timer;                    // Pointer to Timer definition
 } os_timer_cb;
 
 // Timer variables
@@ -836,16 +837,16 @@ static int32_t rt_timer_remove (os_timer_cb *pt) {
 
 
 // Timer Service Calls declarations
-SVC_3_1(svcTimerCreate,           osTimerId,  osTimerDef_t *, os_timer_type, void *, RET_pointer)
-SVC_2_1(svcTimerStart,            osStatus,   osTimerId,      uint32_t,              RET_osStatus)
-SVC_1_1(svcTimerStop,             osStatus,   osTimerId,                             RET_osStatus)
-SVC_1_1(svcTimerDelete,           osStatus,   osTimerId,                             RET_osStatus)
-SVC_1_2(svcTimerCall,   os_InRegs osCallback, osTimerId,                             RET_osCallback)
+SVC_3_1(svcTimerCreate,           osTimerId,  const osTimerDef_t *, os_timer_type, void *, RET_pointer)
+SVC_2_1(svcTimerStart,            osStatus,   osTimerId,            uint32_t,              RET_osStatus)
+SVC_1_1(svcTimerStop,             osStatus,   osTimerId,                                   RET_osStatus)
+SVC_1_1(svcTimerDelete,           osStatus,   osTimerId,                                   RET_osStatus)
+SVC_1_2(svcTimerCall,   os_InRegs osCallback, osTimerId,                                   RET_osCallback)
 
 // Timer Management Service Calls
 
 /// Create timer
-osTimerId svcTimerCreate (osTimerDef_t *timer_def, os_timer_type type, void *argument) {
+osTimerId svcTimerCreate (const osTimerDef_t *timer_def, os_timer_type type, void *argument) {
   os_timer_cb *pt;
 
   if ((timer_def == NULL) || (timer_def->ptimer == NULL)) {
@@ -1009,7 +1010,7 @@ uint32_t rt_timer_delay_count(void)
 // Timer Management Public API
 
 /// Create timer
-osTimerId osTimerCreate (osTimerDef_t *timer_def, os_timer_type type, void *argument) {
+osTimerId osTimerCreate (const osTimerDef_t *timer_def, os_timer_type type, void *argument) {
   if (__get_IPSR() != 0) return NULL;           // Not allowed in ISR
   if (((__get_CONTROL() & 1) == 0) && (os_running == 0)) {
     // Privileged and not running
@@ -1187,7 +1188,7 @@ int32_t osSignalGet (osThreadId thread_id) {
 }
 
 /// Wait for one or more Signal Flags to become signaled for the current RUNNING thread
-os_InRegs osEvent osSignalWait (int32_t signals, uint32_t millisec) {
+static os_InRegs osEvent __osSignalWait (int32_t signals, uint32_t millisec) {
   osEvent ret;
 
   if (__get_IPSR() != 0) {                      // Not allowed in ISR
@@ -1197,14 +1198,37 @@ os_InRegs osEvent osSignalWait (int32_t signals, uint32_t millisec) {
   return __svcSignalWait(signals, millisec);
 }
 
+os_InRegs osEvent osSignalWait (int32_t signals, uint32_t millisec) {
+  osEvent ret;
+  uint32_t t1, t2;
+
+  t1 = hal_sys_timer_get();
+  ret = __osSignalWait(signals, millisec);
+  t2 = hal_sys_timer_get();
+
+  if (ret.status == osEventSignal)
+        return ret;
+
+  if ((ret.status == osEventTimeout) && millisec) {
+      if (TICKS_TO_MS(t2 - t1) < millisec) {
+          ret.status = osEventSignal;
+          return ret;
+      } else {
+          ret.status = osEventTimeout;
+          return ret;
+      }
+  }
+
+  return ret;
+}
 
 // ==== Mutex Management ====
 
 // Mutex Service Calls declarations
 SVC_1_1(svcMutexCreate,  osMutexId, const osMutexDef_t *,           RET_pointer)
-SVC_2_1(svcMutexWait,    osStatus,  osMutexId,      uint32_t, RET_osStatus)
-SVC_1_1(svcMutexRelease, osStatus,  osMutexId,                RET_osStatus)
-SVC_1_1(svcMutexDelete,  osStatus,  osMutexId,                RET_osStatus)
+SVC_2_1(svcMutexWait,    osStatus,  osMutexId,            uint32_t, RET_osStatus)
+SVC_1_1(svcMutexRelease, osStatus,  osMutexId,                      RET_osStatus)
+SVC_1_1(svcMutexDelete,  osStatus,  osMutexId,                      RET_osStatus)
 
 // Mutex Service Calls
 
@@ -1322,7 +1346,7 @@ osStatus osMutexDelete (osMutexId mutex_id) {
 // ==== Semaphore Management ====
 
 // Semaphore Service Calls declarations
-SVC_2_1(svcSemaphoreCreate,  osSemaphoreId, const osSemaphoreDef_t *,  int32_t, RET_pointer)
+SVC_2_1(svcSemaphoreCreate,  osSemaphoreId, const osSemaphoreDef_t *, int32_t,  RET_pointer)
 SVC_2_1(svcSemaphoreWait,    int32_t,             osSemaphoreId,      uint32_t, RET_int32_t)
 SVC_1_1(svcSemaphoreRelease, osStatus,            osSemaphoreId,                RET_osStatus)
 SVC_1_1(svcSemaphoreDelete,  osStatus,            osSemaphoreId,                RET_osStatus)
@@ -1429,7 +1453,7 @@ static __INLINE osStatus isrSemaphoreRelease (osSemaphoreId semaphore_id) {
 // Semaphore Public API
 
 /// Create and Initialize a Semaphore object
-osSemaphoreId osSemaphoreCreate (osSemaphoreDef_t *semaphore_def, int32_t count) {
+osSemaphoreId osSemaphoreCreate (const osSemaphoreDef_t *semaphore_def, int32_t count) {
   if (__get_IPSR() != 0) return NULL;           // Not allowed in ISR
   if (((__get_CONTROL() & 1) == 0) && (os_running == 0)) {
     // Privileged and not running
@@ -1479,8 +1503,8 @@ static void rt_clr_box (void *box_mem, void *box) {
 
 // Memory Management Service Calls declarations
 SVC_1_1(svcPoolCreate, osPoolId, const osPoolDef_t *,           RET_pointer)
-SVC_2_1(sysPoolAlloc,  void *,   osPoolId,      uint32_t, RET_pointer)
-SVC_2_1(sysPoolFree,   osStatus, osPoolId,      void *,   RET_osStatus)
+SVC_2_1(sysPoolAlloc,  void *,   osPoolId,            uint32_t, RET_pointer)
+SVC_2_1(sysPoolFree,   osStatus, osPoolId,            void *,   RET_osStatus)
 
 // Memory Management Service & ISR Calls
 
@@ -1533,7 +1557,7 @@ osStatus sysPoolFree (osPoolId pool_id, void *block) {
 // Memory Management Public API
 
 /// Create and Initialize memory pool
-osPoolId osPoolCreate (osPoolDef_t *pool_def) {
+osPoolId osPoolCreate (const osPoolDef_t *pool_def) {
   if (__get_IPSR() != 0) return NULL;           // Not allowed in ISR
   if (((__get_CONTROL() & 1) == 0) && (os_running == 0)) {
     // Privileged and not running
@@ -1574,14 +1598,14 @@ osStatus osPoolFree (osPoolId pool_id, void *block) {
 // ==== Message Queue Management Functions ====
 
 // Message Queue Management Service Calls declarations
-SVC_2_1(svcMessageCreate,        osMessageQId,    osMessageQDef_t *, osThreadId,           RET_pointer)
-SVC_3_1(svcMessagePut,              osStatus,     osMessageQId,      uint32_t,   uint32_t, RET_osStatus)
-SVC_2_3(svcMessageGet,    os_InRegs osEvent,      osMessageQId,      uint32_t,             RET_osEvent)
+SVC_2_1(svcMessageCreate,        osMessageQId,    const osMessageQDef_t *, osThreadId,           RET_pointer)
+SVC_3_1(svcMessagePut,              osStatus,     osMessageQId,            uint32_t,   uint32_t, RET_osStatus)
+SVC_2_3(svcMessageGet,    os_InRegs osEvent,      osMessageQId,            uint32_t,             RET_osEvent)
 
 // Message Queue Service Calls
 
 /// Create and Initialize Message Queue
-osMessageQId svcMessageCreate (osMessageQDef_t *queue_def, osThreadId thread_id) {
+osMessageQId svcMessageCreate (const osMessageQDef_t *queue_def, osThreadId thread_id) {
 
   if ((queue_def == NULL) ||
       (queue_def->queue_sz == 0) ||
@@ -1696,7 +1720,7 @@ static __INLINE os_InRegs osEvent isrMessageGet (osMessageQId queue_id, uint32_t
 // Message Queue Management Public API
 
 /// Create and Initialize Message Queue
-osMessageQId osMessageCreate (osMessageQDef_t *queue_def, osThreadId thread_id) {
+osMessageQId osMessageCreate (const osMessageQDef_t *queue_def, osThreadId thread_id) {
   if (__get_IPSR() != 0) return NULL;           // Not allowed in ISR
   if (((__get_CONTROL() & 1) == 0) && (os_running == 0)) {
     // Privileged and not running
@@ -1728,14 +1752,14 @@ os_InRegs osEvent osMessageGet (osMessageQId queue_id, uint32_t millisec) {
 // ==== Mail Queue Management Functions ====
 
 // Mail Queue Management Service Calls declarations
-SVC_2_1(svcMailCreate, osMailQId, osMailQDef_t *, osThreadId,                   RET_pointer)
-SVC_4_1(sysMailAlloc,  void *,    osMailQId,      uint32_t, uint32_t, uint32_t, RET_pointer)
-SVC_3_1(sysMailFree,   osStatus,  osMailQId,      void *,   uint32_t,           RET_osStatus)
+SVC_2_1(svcMailCreate, osMailQId, const osMailQDef_t *, osThreadId,                     RET_pointer)
+SVC_4_1(sysMailAlloc,  void *,    osMailQId,            uint32_t,   uint32_t, uint32_t, RET_pointer)
+SVC_3_1(sysMailFree,   osStatus,  osMailQId,            void *,     uint32_t,           RET_osStatus)
 
 // Mail Queue Management Service & ISR Calls
 
 /// Create and Initialize mail queue
-osMailQId svcMailCreate (osMailQDef_t *queue_def, osThreadId thread_id) {
+osMailQId svcMailCreate (const osMailQDef_t *queue_def, osThreadId thread_id) {
   uint32_t blk_sz;
   P_MCB    pmcb;
   void    *pool;
@@ -1845,7 +1869,7 @@ osStatus sysMailFree (osMailQId queue_id, void *mail, uint32_t isr) {
 // Mail Queue Management Public API
 
 /// Create and Initialize mail queue
-osMailQId osMailCreate (osMailQDef_t *queue_def, osThreadId thread_id) {
+osMailQId osMailCreate (const osMailQDef_t *queue_def, osThreadId thread_id) {
   if (__get_IPSR() != 0) return NULL;           // Not allowed in ISR
   if (((__get_CONTROL() & 1) == 0) && (os_running == 0)) {
     // Privileged and not running

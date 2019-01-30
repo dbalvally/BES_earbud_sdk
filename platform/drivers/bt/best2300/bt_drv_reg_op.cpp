@@ -545,15 +545,15 @@ void bt_drv_reg_op_crash_dump(void)
                 acl_par_ptr, *(uint32_t *)(acl_par_ptr+140),*(uint16_t *)(acl_par_ptr+150),
                 *(uint32_t *)(acl_par_ptr+136),((*(uint32_t *)(acl_par_ptr+150))&0xFFFF0000)>>16);
         }
-       if(hal_get_chip_metal_id() < HAL_CHIP_METAL_ID_5)					
+        if(hal_get_chip_metal_id() < HAL_CHIP_METAL_ID_5)					
+        {
+        	evt_ptr = *(uint32_t *)(0xc00008ec); 
+        }
+    	else
        	{
-	    evt_ptr = *(uint32_t *)(0xc00008ec); 
+           	evt_ptr = *(uint32_t *)(0xc000094c); 
        	}
-	else
-       {
-           evt_ptr = *(uint32_t *)(0xc000094c); 
-       }
-	TRACE_HIGHPRIO("esco linkid :%d",*(uint8_t *)(evt_ptr+70));
+    	TRACE_HIGHPRIO("esco linkid :%d",*(uint8_t *)(evt_ptr+70));
         for(link_id=0;link_id<3;link_id++){
             TRACE_HIGHPRIO("bt_linkcntl_linklbl 0x%x: link id %d",*(uint16_t *)(0xd0211152+link_id*110),link_id);
             TRACE_HIGHPRIO("rxcount :%x",*(uint16_t *)(0xd02111a4+link_id*110));
@@ -1415,98 +1415,99 @@ void bt_drv_reg_op_ble_llm_substate_hacker(void)
 
 bool  bt_drv_reg_op_check_esco_acl_sniff_conflict(uint16_t hciHandle)
 {
-      bool check_res=false;
-       int ret = -1;
-       //acl
-       uint32_t acl_evt_ptr = 0x0;
-       uint32_t acl_sniff_anchor_point=0;
-       uint32_t acl_sniff_anchor_offset=0;
-       uint32_t acl_linkid =btdrv_conhdl_to_linkid(hciHandle);
-       uint32_t  acl_sniff_anchor_point_addr=0x0;
+	bool check_res=false;
+	int ret = -1;
+	//acl
+	uint32_t acl_evt_ptr = 0x0;
+	uint32_t acl_sniff_anchor_point=0;
+	uint32_t acl_sniff_anchor_offset=0;
+	uint32_t acl_linkid =btdrv_conhdl_to_linkid(hciHandle);
+	uint32_t  acl_sniff_anchor_point_addr=0x0;
 
-    //sco
-       uint32_t sco_evt_ptr = 0x0;
-       uint32_t sco_anchor_point=0;
-       uint32_t t_esco=12;
-       uint32_t sco_anchor_point_addr=0x0; 
-       uint32_t sco_tesco_point_addr=0x0;
+	//sco
+	uint32_t sco_evt_ptr = 0x0;
+	uint32_t sco_anchor_point=0;
+	uint32_t t_esco=12;
+	uint32_t sco_anchor_point_addr=0x0; 
+	uint32_t sco_tesco_point_addr=0x0;
        
-       // TODO: [ld_sco_env address] based on CHIP id
-       if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_3 || hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_4)
-       {
-           sco_evt_ptr = *(volatile uint32_t *)0xc00008ec;//ld_sco_env
-           acl_evt_ptr=*(volatile uint32_t *)(0xc00008fc+acl_linkid*4);//ld_acl_env
-           ret = 0;
-       }
-        else if(hal_get_chip_metal_id()>=HAL_CHIP_METAL_ID_5)
-        {
-           sco_evt_ptr = *(volatile uint32_t *)0xc000094c;//ld_sco_env
-           acl_evt_ptr=*(volatile uint32_t *)(0xc000095c+acl_linkid*4);//ld_acl_env
-           ret = 0;            
-        }	   
+	// TODO: [ld_sco_env address] based on CHIP id
+	if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_3 || hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_4)
+	{
+		sco_evt_ptr = *(volatile uint32_t *)0xc00008ec;//ld_sco_env
+		acl_evt_ptr=*(volatile uint32_t *)(0xc00008fc+acl_linkid*4);//ld_acl_env
+		ret = 0;
+	}
+	else if(hal_get_chip_metal_id()>=HAL_CHIP_METAL_ID_5)
+	{
+		sco_evt_ptr = *(volatile uint32_t *)0xc000094c;//ld_sco_env
+		acl_evt_ptr=*(volatile uint32_t *)(0xc000095c+acl_linkid*4);//ld_acl_env
+		ret = 0;            
+	}	   
        
-       if(ret == 0)           
-       {
-            if(sco_evt_ptr !=0)
-            {
-                sco_anchor_point_addr =sco_evt_ptr+0x34;//sco anchor_point 
-                sco_tesco_point_addr=sco_evt_ptr+0x42;//tesco
-            }
-            else
-            {
-                ret = -1;
-            }
+	if(ret == 0)           
+	{
+	    if(sco_evt_ptr !=0)
+	    {
+	        sco_anchor_point_addr =sco_evt_ptr+0x34;//sco anchor_point 
+	        sco_tesco_point_addr=sco_evt_ptr+0x42;//tesco
+	    }
+	    else
+	    {
+	        ret = -1;
+	    }
   
-            if(acl_evt_ptr !=0)
-            {
-                acl_sniff_anchor_point_addr =acl_evt_ptr+0xd4;//acl anchor_point 
-            }
-            else
-            {
-                ret = -2;
-            }
-        } 
-        if(ret==0)
-        {
-            do{
-                     //sco anchor point get
-                    if(*(volatile uint32_t *)sco_anchor_point_addr == 0)
-                    {
-                        ret = -3;
-                        break;  
-                    }
-                    //sco tesco get
-                    if(*(volatile uint8_t *)sco_tesco_point_addr == 0)
-                    {
-                        ret = -4;
-                        break;  
-                    }
+	    if(acl_evt_ptr !=0)
+	    {
+	        acl_sniff_anchor_point_addr =acl_evt_ptr+0xd4;//acl anchor_point 
+	    }
+	    else
+	    {
+	        ret = -2;
+	    }
+	} 
+	if(ret==0)
+	{
+		do{
+			//sco anchor point get
+			if(*(volatile uint32_t *)sco_anchor_point_addr == 0)
+			{
+				ret = -3;
+				break;  
+			}
+			//sco tesco get
+			if(*(volatile uint8_t *)sco_tesco_point_addr == 0)
+			{
+				ret = -4;
+				break;  
+			}
                     
-                    //record the number of sco anchor point
-                    sco_anchor_point = *(volatile uint32_t *)sco_anchor_point_addr;
-                    t_esco = *(volatile uint8_t *)sco_tesco_point_addr;
+			//record the number of sco anchor point
+			sco_anchor_point = *(volatile uint32_t *)sco_anchor_point_addr;
+			t_esco = *(volatile uint8_t *)sco_tesco_point_addr;
 
-                    //acl sniff anchor point get
-                    if(*(volatile uint32_t *)acl_sniff_anchor_point_addr == 0)
-                    {
-                        ret = -5;
-                        break;  
-                    }
-                    //record the number of sco anchor point
-                    acl_sniff_anchor_point = *(volatile uint32_t *)acl_sniff_anchor_point_addr;
-                      if(acl_sniff_anchor_point>= sco_anchor_point)
-                     { 
-                         acl_sniff_anchor_offset =((acl_sniff_anchor_point -sco_anchor_point)%t_esco);
-                      }
-                    else
-                    {
-                        acl_sniff_anchor_offset =((sco_anchor_point-acl_sniff_anchor_point )%t_esco);
-                    }
+			//acl sniff anchor point get
+			if(*(volatile uint32_t *)acl_sniff_anchor_point_addr == 0)
+			{
+				ret = -5;
+				break;  
+			}
+			//record the number of sco anchor point
+			acl_sniff_anchor_point = *(volatile uint32_t *)acl_sniff_anchor_point_addr;
+			if(acl_sniff_anchor_point>= sco_anchor_point)
+			{ 
+				acl_sniff_anchor_offset =((acl_sniff_anchor_point -sco_anchor_point)%t_esco);
+			}
+			else
+			{
+				acl_sniff_anchor_offset =((sco_anchor_point-acl_sniff_anchor_point )%t_esco);
+			}
                            
-                   if((acl_sniff_anchor_offset<4)||(acl_sniff_anchor_offset>8))
-                        check_res = true;
-                }while(0);
-     }
+			if((acl_sniff_anchor_offset<4)||(acl_sniff_anchor_offset>8)) {
+				check_res = true;
+			}
+		}while(0);
+	}
         
     static uint8_t trace_counter = 0;
     if(++trace_counter>100)
@@ -1656,9 +1657,6 @@ void bt_drv_reg_op_esco_acl_sniff_delay_cal(uint16_t hciHandle,bool enable)
     LOG_PRINT_BT_DRIVER("%s,ret=%d",__func__,ret);
 }
 
-
-
-
 uint8_t  bt_drv_reg_op_get_role(uint8_t linkid)
 {
     uint32_t lc_evt_ptr;
@@ -1669,7 +1667,7 @@ uint8_t  bt_drv_reg_op_get_role(uint8_t linkid)
     }
     else if(hal_get_chip_metal_id()>=HAL_CHIP_METAL_ID_5)
     {
-       lc_evt_ptr = *(volatile uint32_t *)(0xc0005bcc+linkid*4);//lc_env
+        lc_evt_ptr = *(volatile uint32_t *)(0xc0005bcc+linkid*4);//lc_env
     }
     if(lc_evt_ptr !=0)
     {
@@ -1685,7 +1683,6 @@ uint8_t  bt_drv_reg_op_get_role(uint8_t linkid)
 
 void bt_drv_reg_op_set_tpoll(uint8_t linkid,uint16_t poll_interval)
 {
-  //  return;
     uint32_t acl_evt_ptr = 0x0;
     uint32_t poll_addr;
     if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_3 || hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_4)
@@ -1698,8 +1695,8 @@ void bt_drv_reg_op_set_tpoll(uint8_t linkid,uint16_t poll_interval)
     }
     if(acl_evt_ptr !=0)
     {
-	    poll_addr = acl_evt_ptr+0xb8;
-	    *(uint16_t *)poll_addr = poll_interval;
+        poll_addr = acl_evt_ptr+0xb8;
+        *(uint16_t *)poll_addr = poll_interval;
     }
     else
     {
@@ -1707,13 +1704,11 @@ void bt_drv_reg_op_set_tpoll(uint8_t linkid,uint16_t poll_interval)
     }
 }
 
-
-
 void bt_drv_reg_set_rssi_seed(uint32_t seed)
 {
     if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_3 || hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_4)
     {
-	*(uint32_t *)0xC0006660 = seed;
+    	*(uint32_t *)0xC0006660 = seed;
     }
     else if(hal_get_chip_metal_id()>=HAL_CHIP_METAL_ID_5)
     {
@@ -1723,32 +1718,67 @@ void bt_drv_reg_set_rssi_seed(uint32_t seed)
 
 /***********************************************************************************
 * function: bt_drv_rssi_correction
-* rssi<=0,rssi-46
-* rssi<=15,rssi-47
-* rssi<=31,rssi-51
-* rssi<=52,rssi-53
-* rssi<=72,rssi-53
-* rssi>72,rssi=127
+* rssi<=-94, rssi=127(invalid)
+* rssi<=-45, rssi-1
+* rssi<=-30, rssi-2
+* rssi<=-14, rssi-6
+* rssi<= 27, rssi-8
+* rssi>  27, rssi=127(invalid)
 ***********************************************************************************/
-uint8_t  bt_drv_rssi_correction(uint8_t rssi)
+int8_t  bt_drv_rssi_correction(int8_t rssi)
 {
 #ifdef __HW_AGC__
     if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_5)
     {
-        if(rssi>0x7F)
-            rssi -=46;
-        else if(rssi<=0x0F)
-            rssi=209+rssi;
-        else if(rssi<=0x1F)
-            rssi=205+rssi;
-        else if(rssi<=0x34)    
-            rssi=203+rssi;
-        else if(rssi<=0x48)
-            rssi-=53;
+        if(rssi <= -94)
+            rssi = 127;
+        else if(rssi <= -45)
+            rssi -= 1;
+        else if(rssi <= -30)
+            rssi -= 2;
+        else if(rssi <= -14)
+            rssi -= 6;
+        else if(rssi <= 27)
+            rssi -= 8;
         else
-            rssi=127;
+            rssi = 127;
     }
 #endif
 
     return rssi;
+}
+
+void bt_drv_set_music_link(uint8_t link_id)
+{
+    if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_5)
+    {
+        *(uint8_t *)0xc000582c = link_id;
+    }
+}
+
+void bt_drv_set_music_link_duration_extra(uint8_t slot)
+{
+    if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_5)
+    {
+        *(uint32_t *)0xc0005830 = slot*625;
+    }
+}
+
+void bt_drv_set_hwagc_read_en(uint8_t en)
+{
+    if(hal_get_chip_metal_id()==HAL_CHIP_METAL_ID_5)
+    {
+
+	*(uint8_t *)0xC000419f = en;
+    }
+}
+
+extern "C" void bt_drv_sleep(void)
+{
+	bt_drv_set_hwagc_read_en(0);
+}
+
+extern "C" void bt_drv_wakeup(void)
+{
+	bt_drv_set_hwagc_read_en(1);
 }

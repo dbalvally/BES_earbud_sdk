@@ -59,6 +59,9 @@
 #ifdef BES_OTA_ENABLED
 #include "ota_handler.h"
 #endif
+#ifdef BES_OTA_BASIC
+#include "ota_spp.h"
+#endif
 #ifdef MEDIA_PLAYER_SUPPORT
 #include "resources.h"
 #include "app_media_player.h"
@@ -71,6 +74,10 @@
 
 #if defined(__FORCE_OTABOOT_UPDATE__)
 #include "apps_ota_checker.h"
+#endif
+
+#ifdef AUDIO_DEBUG_V0_1_0  
+extern int speech_tuning_init(void);
 #endif
 
 #if defined(BTUSB_AUDIO_MODE)
@@ -100,6 +107,11 @@ void player_role_thread_init(void);
 #include "log_section.h"
 #include "app_hfp.h"
 #include "app_spp.h"
+
+#ifdef __AMA_VOICE__
+#include "app_ama_handle.h"
+#include "ai_manager.h"
+#endif
 
 extern "C"
 {
@@ -572,6 +584,20 @@ extern "C" int app_voice_report(APP_STATUS_INDICATION_T status,uint8_t device_id
             id = AUD_ID_BT_TWS_RIGHTCHNL;
             break;
 #endif
+#ifdef _AMA_
+        case APP_STATUS_INDICATION_ALEXA_START:
+            id = AUDIO_ID_BT_ALEXA_START;
+            break;
+        case APP_STATUS_INDICATION_ALEXA_STOP:
+            id = AUDIO_ID_BT_ALEXA_STOP;
+            break;
+#endif
+        case APP_STATUS_INDICATION_GSOUND_MIC_OPEN:
+            id = AUDIO_ID_BT_GSOUND_MIC_OPEN;
+            break;
+        case APP_STATUS_INDICATION_GSOUND_MIC_CLOSE:
+            id = AUDIO_ID_BT_GSOUND_MIC_CLOSE;
+            break;
 
 
 
@@ -743,11 +769,11 @@ static void app_postponed_reset_timer_handler(void const *param)
 void app_start_postponed_reset(void)
 {
 	if (NULL == app_postponed_reset_timer)
-	{
-		osTimerCreate(osTimer(APP_POSTPONED_RESET_TIMER), osTimerOnce, NULL);	
-	}
+    {
+        app_postponed_reset_timer = osTimerCreate(osTimer(APP_POSTPONED_RESET_TIMER), osTimerOnce, NULL);    
+    }
 
-	osTimerStart(app_postponed_reset_timer, APP_RESET_PONTPONED_TIME_IN_MS);
+    osTimerStart(app_postponed_reset_timer, APP_RESET_PONTPONED_TIME_IN_MS);
 }
 
 
@@ -848,7 +874,7 @@ extern "C" void app_enter_fastpairing_mode(void);
 
 void app_tws_simulate_pairing(void);
 void app_tws_freeman_simulate_pairing(void);
-void app_tws_req_set_lbrt(uint8_t en, uint8_t initial_req, uint32_t ticks);
+void app_tws_toggle_lbrt_mode(uint8_t en);
 uint8_t iic_mask=0;
 extern "C" void pmu_sleep_en(unsigned char sleep_en);
 void app_bt_key_simulation(APP_KEY_STATUS *status, void *param)
@@ -863,7 +889,7 @@ void app_bt_key_simulation(APP_KEY_STATUS *status, void *param)
             }
 #else
 #ifdef LBRT         
-            app_tws_req_set_lbrt(0,1,bt_syn_get_curr_ticks(app_tws_get_tws_conhdl()));
+            app_tws_toggle_lbrt_mode(LBRT_DISABLE);
 #else
             app_start_custom_function_in_bt_thread(RESTORE_THE_ORIGINAL_PLAYING_STATE,
                     0, (uint32_t)app_tws_kickoff_switching_role);
@@ -895,7 +921,7 @@ void app_bt_key_simulation(APP_KEY_STATUS *status, void *param)
 #endif
 
 #ifdef LBRT
-            app_tws_req_set_lbrt(1,1,bt_syn_get_curr_ticks(app_tws_get_tws_conhdl()));
+            app_tws_toggle_lbrt_mode(LBRT_ENABLE);
 #else
             app_tws_freeman_simulate_pairing();
 #endif
@@ -997,6 +1023,43 @@ void app_bt_key(APP_KEY_STATUS *status, void *param)
     }
 }
 
+#ifdef _AMA_
+void app_voice_assistant_key(APP_KEY_STATUS *status, void *param) 
+{
+	app_ama_wake_up();
+}
+#endif
+
+#ifdef _AMA_
+const APP_KEY_HANDLE  app_key_handle_cfg[] = {
+//shutdown 
+    {{APP_KEY_CODE_PWR,APP_KEY_EVENT_DOWN},"bt function key",app_bt_key_shutdown, NULL},
+//v- & v+    
+    {{APP_KEY_CODE_FN1,APP_KEY_EVENT_UP},"bt volume up key",app_bt_key, NULL},
+    {{APP_KEY_CODE_FN2,APP_KEY_EVENT_UP},"bt volume down key",app_bt_key, NULL},
+//bt control
+    {{APP_KEY_CODE_FN1,APP_KEY_EVENT_LONGPRESS},"next track",app_bt_key, NULL},
+    {{APP_KEY_CODE_FN2,APP_KEY_EVENT_LONGPRESS},"prev track",app_bt_key, NULL},
+    {{APP_KEY_CODE_FN4,APP_KEY_EVENT_CLICK},"mfb function key",app_bt_key, NULL},
+    {{APP_KEY_CODE_FN4,APP_KEY_EVENT_DOUBLECLICK},"mfb function key",app_bt_key, NULL},
+    {{APP_KEY_CODE_FN4,APP_KEY_EVENT_LONGPRESS},"mfb function key",app_bt_key, NULL},
+
+    //{{APP_KEY_CODE_FN3,APP_KEY_EVENT_CLICK},"pair key",app_enter_paring_groupkey_keep_con, NULL},
+    //{{APP_KEY_CODE_FN3,APP_KEY_EVENT_LONGPRESS},"pair key",app_enter_paring_groupkey_keep_con, NULL},
+
+//combo group key
+    //{{APP_KEY_CODE_FN1|APP_KEY_CODE_FN2,APP_KEY_EVENT_REPEAT},"factory reset",app_factory_reset_groupkey, NULL},
+    //{{APP_KEY_CODE_FN2|HAL_KEY_CODE_FN4,APP_KEY_EVENT_REPEAT},"FW display",app_bt_key_display_firmware_version, NULL},
+
+    //{{APP_KEY_CODE_NONE,APP_KEY_EVENT_NONE},"group key end",   test_print2, NULL},
+
+    //{{APP_KEY_CODE_FN5,APP_KEY_EVENT_CLICK},"talk thru key",app_talk_thru_key, NULL},
+
+
+    {{APP_KEY_CODE_VOICEPATH, APP_KEY_EVENT_CLICK}, "voice assistant key", app_voice_assistant_key, NULL},
+};
+
+#else
 #ifdef __POWERKEY_CTRL_ONOFF_ONLY__
 #if defined(__APP_KEY_FN_STYLE_A__)
 const APP_KEY_HANDLE  app_key_handle_cfg[] = {
@@ -1096,6 +1159,7 @@ const APP_KEY_HANDLE  app_key_handle_cfg[] = {
 };
 #endif
 #endif
+#endif //_AMA_
 
 void app_key_init(void)
 {
@@ -1157,6 +1221,7 @@ void CloseEarphone(void)
 void a2dp_suspend_music_force(void);
 extern uint8_t app_tws_auto_poweroff;
 uint8_t app_poweroff_flag=0;
+extern "C" uint8_t is_sco_mode (void);
 int app_deinit(int deinit_case)
 {
     int nRet = 0;
@@ -1169,6 +1234,12 @@ int app_deinit(int deinit_case)
     app_poweroff_flag = 1;
     app_status_indication_filter_set(APP_STATUS_INDICATION_BOTHSCAN);
     app_status_indication_set(APP_STATUS_INDICATION_POWEROFF);
+
+    if (is_sco_mode())
+    {
+        app_bt_disconnect_sco_link();
+        osDelay(200);
+    }
 
     a2dp_suspend_music_force();
     osDelay(200);
@@ -1240,15 +1311,14 @@ int app_bt_connect2tester_init(void)
     bool find_tester = false;
     struct nvrecord_env_t *nvrecord_env;
     btdevice_profile *btdevice_plf_p;
-    factory_section_data_t *factory_section_data = factory_section_data_ptr_get();
-
+	uint8_t* btAddr = factory_section_get_bt_address();
     nv_record_env_get(&nvrecord_env);
 
     if (nvrecord_env->factory_tester_status.status != NVRAM_ENV_FACTORY_TESTER_STATUS_DEFAULT)
         return 0;
 
-    if (factory_section_data){
-        memcpy(tester_addr.address, factory_section_data->bt_address, BTIF_BD_ADDR_SIZE);
+    if (btAddr){
+        memcpy(tester_addr.address, btAddr, BTIF_BD_ADDR_SIZE);
         nv_record_open(section_usrdata_ddbrecord);
         for (i = 0; nv_record_enum_dev_records(i, &rec) == BT_STS_SUCCESS; i++) {
             if (!memcmp(rec.bdAddr.address, tester_addr.address, BTIF_BD_ADDR_SIZE)){
@@ -1443,15 +1513,18 @@ int app_init(void)
     app_os_init();
     app_status_indication_init();
 
+#ifdef BTADDR_FOR_DEBUG
+    gen_bt_addr_for_debug();
+#endif
+
 #if OS_HAS_CPU_STAT
-        cpu_usage_timer_id = osTimerCreate(osTimer(cpu_usage_timer), osTimerPeriodic, NULL);
-        if (cpu_usage_timer_id != NULL) {
-            osTimerStart(cpu_usage_timer_id, CPU_USAGE_TIMER_TMO_VALUE);
-        }
+    cpu_usage_timer_id = osTimerCreate(osTimer(cpu_usage_timer), osTimerPeriodic, NULL);
+    if (cpu_usage_timer_id != NULL) {
+        osTimerStart(cpu_usage_timer_id, CPU_USAGE_TIMER_TMO_VALUE);
+    }
 #endif
 
     app_config_ble_tws();
-
 
     if (hal_sw_bootmode_get() & HAL_SW_BOOTMODE_REBOOT){
         hal_sw_bootmode_clear(HAL_SW_BOOTMODE_REBOOT);
@@ -1534,9 +1607,17 @@ int app_init(void)
 #if defined(HALFDUPLEXUART)
 	usr_halfduplexuart_open(115200);
 #endif
+#ifdef AUDIO_DEBUG_V0_1_0  
+    speech_tuning_init();
+#endif
 #ifdef ANC_APP
 	app_anc_open_module();
 #endif
+
+#ifdef _AMA_
+		app_ama_handle_init();
+#endif
+
 #ifdef MEDIA_PLAYER_SUPPORT
     app_play_audio_set_lang(nvrecord_env->media_language.language);
 #endif
@@ -1621,7 +1702,7 @@ int app_init(void)
 #endif
         {
             if (pwron_case != APP_POWERON_CASE_INVALID && pwron_case != APP_POWERON_CASE_DITHERING){
-                LOG_PRINT_APPS("hello world i'm bes1000 hahaha case:%d\n", pwron_case);
+                LOG_PRINT_APPS("Power on case:%d\n", pwron_case);
                 nRet = 0;
 #ifndef __POWERKEY_CTRL_ONOFF_ONLY__
                 app_status_indication_set(APP_STATUS_INDICATION_INITIAL);
@@ -1643,6 +1724,12 @@ int app_init(void)
 #endif
 #ifdef BES_OTA_ENABLED
                 ota_handler_init();
+#endif
+#ifdef BES_OTA_BASIC
+	bes_ota_init();
+#ifdef BES_OTA_TWS
+	ota_refresh_transmitter();
+#endif
 #endif
                 switch (pwron_case) {
                     case APP_POWERON_CASE_CALIB:

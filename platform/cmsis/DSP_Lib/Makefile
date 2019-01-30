@@ -12,10 +12,13 @@ else
 obj-y :=
 obj-y += \
 	CommonTables/ \
+	BasicMathFunctions/arm_dot_prod_q15.c \
 	FilteringFunctions/arm_biquad_cascade_df1_init_f32.c \
 	FilteringFunctions/arm_biquad_cascade_df1_f32.c \
 	TransformFunctions/arm_bitreversal2.S \
 	TransformFunctions/arm_cfft_f32.c \
+	TransformFunctions/arm_cfft_q15.c \
+	TransformFunctions/arm_cfft_radix4_q15.c \
 	TransformFunctions/arm_cfft_radix8_f32.c \
 	TransformFunctions/arm_rfft_fast_init_f32.c \
 	TransformFunctions/arm_rfft_fast_f32.c \

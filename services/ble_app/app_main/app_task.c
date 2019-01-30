@@ -76,6 +76,10 @@
 #include "datapathps_task.h"
 #endif // (BLE_APP_DATAPATH_SERVER)
 
+#if (BLE_APP_AMA_VOICE)
+#include "app_ama_ble.h"       // ama Voice Module Definition
+#endif // (BLE_APP_AMA)
+
 #if (BLE_APP_OTA)
 #include "app_ota.h"       // OTA Module Definition
 #include "ota_task.h"
@@ -514,19 +518,31 @@ static int gapc_set_dev_info_req_ind_handler(ke_msg_id_t const msgid,
     return (KE_MSG_CONSUMED);
 }
 
-/*
-static void gpac_exchange_data_packet_length(uint8_t conidx)
+static void POSSIBLY_UNUSED gapc_refresh_remote_dev_feature(uint8_t conidx)
+{
+    // Send a GAPC_GET_INFO_CMD in order to read the device name characteristic value
+    struct gapc_get_info_cmd *p_cmd = KE_MSG_ALLOC(GAPC_GET_INFO_CMD,
+                                                   KE_BUILD_ID(TASK_GAPC, conidx), TASK_GAPM,
+                                                   gapc_get_info_cmd);
+
+    // request peer device name.
+    p_cmd->operation = GAPC_GET_PEER_FEATURES;
+
+    // send command
+    ke_msg_send(p_cmd);
+}
+
+static void POSSIBLY_UNUSED gpac_exchange_data_packet_length(uint8_t conidx)
 {
     struct gapc_set_le_pkt_size_cmd* set_le_pakt_size_req = KE_MSG_ALLOC(GAPC_SET_LE_PKT_SIZE_CMD, 
-                                                        KE_BUILD_ID(TASK_GAPC, conidx), TASK_APP,
-                                                        gapc_set_le_pkt_size_cmd);
+        KE_BUILD_ID(TASK_GAPC, conidx), TASK_APP,
+        gapc_set_le_pkt_size_cmd);
     set_le_pakt_size_req->operation = GAPC_SET_LE_PKT_SIZE;
     set_le_pakt_size_req->tx_octets = APP_MAX_TX_OCTETS;
     set_le_pakt_size_req->tx_time = APP_MAX_TX_TIME;
     // Send message
-    ke_msg_send(set_le_pakt_size_req);  
+    ke_msg_send(set_le_pakt_size_req);	
 }
-*/
 
 static int gapc_peer_features_ind_handler(ke_msg_id_t const msgid,
                                           struct gapc_peer_features_ind* param,
@@ -535,10 +551,11 @@ static int gapc_peer_features_ind_handler(ke_msg_id_t const msgid,
 {
     LOG_PRINT_BLE("Peer dev feature is:");
     LOG_PRINT_BLE_DUMP8("0x%02x ", param->features, GAP_LE_FEATS_LEN);
+    uint8_t conidx = KE_IDX_GET(src_id);
 
     if (param->features[0] & GAPC_EXT_DATA_LEN_MASK)
     {
-        //gpac_exchange_data_packet_length(app_env.conidx);
+        gpac_exchange_data_packet_length(conidx);
     }
     return (KE_MSG_CONSUMED);
 }
@@ -627,6 +644,8 @@ static int gapc_connection_req_ind_handler(ke_msg_id_t const msgid,
 
     // We are now in connected State
     ke_state_set(dest_id, APPM_CONNECTED);
+	
+	gapc_refresh_remote_dev_feature(conidx);
 
     app_env.conn_cnt++;
     
@@ -731,8 +750,15 @@ static int gapc_disconnect_ind_handler(ke_msg_id_t const msgid,
     app_gfps_disconnected_evt_handler(conidx);
     #endif
 
+	#if (BLE_AMA_VOICE)
+	app_ama_disconnected_evt_handler(conidx);
+	#endif
 
     app_tws_disconnected_evt_handler(conidx);
+
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+    app_ble_stop_update_conn_param_op();
+#endif
 
     return (KE_MSG_CONSUMED);
 }
@@ -859,6 +885,14 @@ static int appm_msg_handler(ke_msg_id_t const msgid,
         } break;
         #endif //(BLE_APP_DATAPATH_SERVER)
 
+		#if (BLE_APP_AMA_VOICE)
+		case (TASK_ID_AMA):
+		{
+			// Call the AMA Voice
+			msg_pol = appm_get_handler(&app_ama_table_handler, msgid, param, src_id);
+		} break;
+		#endif //(BLE_APP_AMA_VOICE)
+
         #if (BLE_APP_OTA)
         case (TASK_ID_OTA):
         {
@@ -950,6 +984,10 @@ __STATIC int gattc_mtu_changed_ind_handler(ke_msg_id_t const msgid,
     app_ota_mtu_exchanged_handler(conidx, param->mtu);
 #endif
 
+#if (BLE_AMA_VOICE)
+	app_ama_mtu_exchanged_handler(conidx, param->mtu);
+#endif
+
     return (KE_MSG_CONSUMED);
 }
 
@@ -967,14 +1005,7 @@ __STATIC int gapc_conn_param_update_req_ind_handler(ke_msg_id_t const msgid,
                                             gapc_param_update_cfm);
 
     LOG_PRINT_BLE("%s intv:%d ", __func__, param->intv_max);
-    if (app_env.context[conidx].isToRejectConnParamUpdateReqFromPeerDev)
-    {
-        cfm->accept = false;
-    }
-    else
-    {
         cfm->accept = true;
-    }
 
     //make sure ble cnt interval isnot less than 30ms, in order to prevent bt collision
     if (param->intv_min < (uint16_t)(30/1.25))
@@ -995,7 +1026,11 @@ static int gapc_conn_param_updated_handler(ke_msg_id_t const msgid,
     uint8_t conidx = KE_IDX_GET(src_id);
     LOG_PRINT_BLE("Conidx %d BLE conn parameter is updated as interval %d timeout %d", 
         conidx, param->con_interval, param->sup_to);
-    
+
+#ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+    app_ble_update_conn_param_op_status(param->con_interval);
+#endif
+
 #if (BLE_VOICEPATH)
     app_voicepath_ble_conn_parameter_updated(conidx, param->con_interval, param->con_interval);
 #endif

@@ -507,9 +507,7 @@ list_entry_t* btif_a2dp_get_stream_sbc_queue(a2dp_stream_t * stream);
 #if defined(A2DP_LHDC_ON)
 btif_avdtp_codec_t * btif_a2dp_get_lhdc_avdtp_codec(void );
 
-bt_status_t btif_a2dp_stream_transfer_lhdc_packet(a2dp_stream_t * Stream, btif_a2dp_sbc_packet_t * Packet,
-                                                                                                                         btif_sbc_stream_info_short_t * StreamInfo);
-
+bt_status_t btif_a2dp_stream_transfer_lhdc_packet(a2dp_stream_t * Stream, btif_a2dp_sbc_packet_t * Packet, btif_sbc_stream_info_short_t * StreamInfo);
 #endif
 
 #if defined(A2DP_AAC_ON)

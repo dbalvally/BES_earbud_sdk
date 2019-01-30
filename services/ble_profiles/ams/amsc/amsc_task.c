@@ -47,8 +47,6 @@
 
 #include "co_utils.h"
 #include "ke_mem.h"
-#include "gsound.h"
-#include "gsound_target_trace.h"
 
 static uint16_t amsc_last_read_handle = BTIF_HCI_INVALID_HANDLE;
 
@@ -121,15 +119,15 @@ static int amsc_enable_req_handler(ke_msg_id_t const msgid,
   // Get connection index
   uint8_t conidx = param->conidx;
   uint8_t state = ke_state_get(dest_id);
-  GSOUND_TRACE(
+  TRACE(
       "AMSC %s Entry. state=%d, "
       "conidx=%d",
       __func__, state, conidx);
 
-  GSOUND_TRACE("AMSC %s amsc_env->env[%d] = 0x%8.8x", __func__, conidx,
+  TRACE("AMSC %s amsc_env->env[%d] = 0x%8.8x", __func__, conidx,
         amsc_env->env[conidx]);
   if ((state == AMSC_IDLE) && (amsc_env->env[conidx] == NULL)) {
-    GSOUND_TRACE("AMSC %s passed state check", __func__);
+    TRACE("AMSC %s passed state check", __func__);
     // allocate environment variable for task instance
     amsc_env->env[conidx] = (struct amsc_cnx_env *)ke_malloc(
         sizeof(struct amsc_cnx_env), KE_MEM_ATT_DB);
@@ -176,7 +174,7 @@ static int amsc_read_cmd_handler(ke_msg_id_t const msgid,
                                  struct gattc_read_cmd *param,
                                  ke_task_id_t const dest_id,
                                  ke_task_id_t const src_id) {
-  GSOUND_TRACE("AMSC %s Entry. hdl=0x%4.4x, op=%d, len=%d, off=%d", __func__,
+  TRACE("AMSC %s Entry. hdl=0x%4.4x, op=%d, len=%d, off=%d", __func__,
         param->req.simple.handle, param->operation, param->req.simple.length,
         param->req.simple.offset);
 
@@ -206,7 +204,7 @@ static int gattc_read_ind_handler(ke_msg_id_t const msgid,
                                   ke_task_id_t const src_id) {
   // Get the address of the environment
   struct amsc_env_tag *amsc_env = PRF_ENV_GET(AMSC, amsc);
-  GSOUND_TRACE("AMSC %s param->handle=%x param->length=%d", __func__, param->handle,
+  TRACE("AMSC %s param->handle=%x param->length=%d", __func__, param->handle,
         param->length);
   uint8_t conidx = KE_IDX_GET(src_id);
 
@@ -239,7 +237,7 @@ static int amsc_write_cmd_handler(ke_msg_id_t const msgid,
                                   struct gattc_write_cmd *param,
                                   ke_task_id_t const dest_id,
                                   ke_task_id_t const src_id) {
-  GSOUND_TRACE("AMSC %s Entry. hdl=0x%4.4x, op=%d, len=%d", __func__,
+  TRACE("AMSC %s Entry. hdl=0x%4.4x, op=%d, len=%d", __func__,
         param->handle, param->operation, param->length);
 
   uint8_t conidx = KE_IDX_GET(dest_id);
@@ -282,15 +280,15 @@ __STATIC int gattc_sdp_svc_ind_handler(ke_msg_id_t const msgid,
                                        ke_task_id_t const src_id) {
   uint8_t state = ke_state_get(dest_id);
 
-  GSOUND_TRACE(
+  TRACE(
       "AMSC %s Entry. end_hdl=0x%4.4x, start_hdl=0x%4.4x, att.att_type=%d",
       __func__, ind->end_hdl, ind->start_hdl, ind->info[0].att.att_type);
-  GSOUND_TRACE(
+  TRACE(
       "AMSC att_char.prop=%d, att_char.handle=0x%4.4x, "
       "att_char.att_type=%d, att_type=%d",
       ind->info[0].att_char.prop, ind->info[0].att_char.handle,
       ind->info[0].att_char.att_type);
-  GSOUND_TRACE(
+  TRACE(
       "AMSC inc_svc.att_type=%d, inc_svc.end_hdl=0x%4.4x, "
       "inc_svc.start_hdl=0x%4.4x, state=%d",
       ind->info[0].att_type, ind->info[0].inc_svc.att_type,
@@ -305,7 +303,7 @@ __STATIC int gattc_sdp_svc_ind_handler(ke_msg_id_t const msgid,
     ASSERT_INFO(amsc_env->env[conidx] != NULL, dest_id, src_id);
 
     if (amsc_env->env[conidx]->nb_svc == 0) {
-      GSOUND_TRACE("AMSC retrieving characteristics and descriptors.");
+      TRACE("AMSC retrieving characteristics and descriptors.");
       // Retrieve AMS characteristics and descriptors
       prf_extract_svc_info_128(ind, AMSC_CHAR_MAX, &amsc_ams_char[0],
                                &amsc_env->env[conidx]->ams.chars[0],
@@ -340,7 +338,7 @@ static int amsc_gattc_cmp_evt_handler(ke_msg_id_t const msgid,
   // Get the address of the environment
   struct amsc_env_tag *amsc_env = PRF_ENV_GET(AMSC, amsc);
   uint8_t conidx = KE_IDX_GET(dest_id);
-  GSOUND_TRACE(
+  TRACE(
       "AMSC %s entry. op=%d, seq=%d, status=%d, conidx=%d",
       __func__, param->operation, param->seq_num, param->status, conidx);
   // Status
@@ -349,7 +347,7 @@ static int amsc_gattc_cmp_evt_handler(ke_msg_id_t const msgid,
   if (amsc_env->env[conidx] != NULL) {
     uint8_t state = ke_state_get(dest_id);
 
-    GSOUND_TRACE("AMSC %s state=%d", __func__, state);
+    TRACE("AMSC %s state=%d", __func__, state);
     if (state == AMSC_DISCOVERING) {
       status = param->status;
 
@@ -380,21 +378,21 @@ static int amsc_gattc_cmp_evt_handler(ke_msg_id_t const msgid,
 
       amsc_enable_rsp_send(amsc_env, conidx, status);
 #if (ANCS_PROXY_ENABLE)
-      GSOUND_TRACE("AMSC %s rmtChar=0x%4.4x, rmtVal=0x%4.4x, rmtCfg=0x%4.4x",
+      TRACE("AMSC %s rmtChar=0x%4.4x, rmtVal=0x%4.4x, rmtCfg=0x%4.4x",
    		    __func__,
             amsc_env->env[conidx]->ams.chars[AMSC_REMOTE_COMMAND_CHAR].char_hdl,
             amsc_env->env[conidx]->ams.chars[AMSC_REMOTE_COMMAND_CHAR].val_hdl,
             amsc_env->env[conidx]
                 ->ams.descs[AMSC_DESC_REMOTE_CMD_CL_CFG]
                 .desc_hdl);
-      GSOUND_TRACE("AMSC %s EnUpChar=0x%4.4x EnUpVal=0x%4.4x, EnUpCfg=0x%4.4x",
+      TRACE("AMSC %s EnUpChar=0x%4.4x EnUpVal=0x%4.4x, EnUpCfg=0x%4.4x",
             __func__,
             amsc_env->env[conidx]->ams.chars[AMSC_ENTITY_UPDATE_CHAR].char_hdl,
             amsc_env->env[conidx]->ams.chars[AMSC_ENTITY_UPDATE_CHAR].val_hdl,
             amsc_env->env[conidx]
                 ->ams.descs[AMSC_DESC_ENTITY_UPDATE_CL_CFG]
                 .desc_hdl);
-      GSOUND_TRACE(
+      TRACE(
           "AMSC %s EnAtrChar=0x%4.4x, EnAtrVal=0x%4.4x", __func__,
           amsc_env->env[conidx]->ams.chars[AMSC_ENTITY_ATTRIBUTE_CHAR].char_hdl,
           amsc_env->env[conidx]->ams.chars[AMSC_ENTITY_ATTRIBUTE_CHAR].val_hdl);
@@ -416,7 +414,7 @@ static int amsc_gattc_cmp_evt_handler(ke_msg_id_t const msgid,
     } else {
       switch (param->operation) {
         case GATTC_READ: {
-          GSOUND_TRACE("AMSC %s read complete status=%d amsc_last_read_handle %d",
+          TRACE("AMSC %s read complete status=%d amsc_last_read_handle %d",
                 __func__, param->status, amsc_last_read_handle);
           if ((0 != param->status) &&
               (BTIF_HCI_INVALID_HANDLE != amsc_last_read_handle)) {
@@ -480,7 +478,7 @@ static int gattc_event_ind_handler(ke_msg_id_t const msgid,
                                    ke_task_id_t const dest_id,
                                    ke_task_id_t const src_id) {
   BLE_FUNC_ENTER();
-  GSOUND_TRACE("AMSC %s Entry. handle=0x%x, len=%d, type=%d, val[0]=0x%x",
+  TRACE("AMSC %s Entry. handle=0x%x, len=%d, type=%d, val[0]=0x%x",
         __func__, param->handle, param->length, param->type, param->value[0]);
   uint8_t conidx = KE_IDX_GET(src_id);
   
@@ -517,7 +515,7 @@ KE_MSG_HANDLER_TAB(amsc){
 };
 
 void amsc_task_init(struct ke_task_desc *task_desc) {
-  GSOUND_TRACE("AMSC %s Entry.", __func__);
+  TRACE("AMSC %s Entry.", __func__);
   // Get the address of the environment
   struct amsc_env_tag *amsc_env = PRF_ENV_GET(AMSC, amsc);
 

@@ -881,14 +881,22 @@ uint32_t BOOT_TEXT_FLASH_LOC read_hw_metal_id(void)
     pmu_write(PMU_REG_ANA_60, 0x5FEE);
     hal_sys_timer_delay(US_TO_TICKS(500));
 
+#ifdef OSC_FAST_WAKEUP_RC_OSC
+    // CAUTION:
+    // This option should be consistent with the RF setting in BT driver
+    extern unsigned int hal_analogif_get_padding_cycles(void);
+    register uint32_t padding;
+
+    padding = hal_analogif_get_padding_cycles();
+
     // Set RF reg 0x194 from 0x0000 to 0x8000 (which will impact OSC)
-    *(volatile uint32_t *)0x4000D008 = 0xC08000;
+    *(volatile uint32_t *)0x4000D008 = 0xC08000 << padding;
 
     hal_cmu_mem_set_freq(HAL_CMU_FREQ_32K);
     hal_cmu_flash_set_freq(HAL_CMU_FREQ_32K);
     hal_cmu_sys_set_freq(HAL_CMU_FREQ_32K);
 
-    *(volatile uint32_t *)0x4000D008 = 0x948000;
+    *(volatile uint32_t *)0x4000D008 = 0x948000 << padding;
 
     hal_sys_timer_delay(MS_TO_TICKS(3));
 
@@ -898,7 +906,8 @@ uint32_t BOOT_TEXT_FLASH_LOC read_hw_metal_id(void)
     hal_ispi_close(0);
     hal_analogif_open();
 
-    *(volatile uint32_t *)0x4000D008 = 0xC00000;
+    *(volatile uint32_t *)0x4000D008 = 0xC00000 << padding;
+#endif
 #endif
 
     // Enable SWD debug mode
@@ -1757,7 +1766,11 @@ static void pmu_dcdc_ana_mode_en(void)
         pmu_ana_set_volt(1, PMU_POWER_MODE_ANA_DCDC);
         pmu_dig_set_volt(1, PMU_POWER_MODE_ANA_DCDC);
 
+#ifdef VCORE_LDO_ON
+        hal_sys_timer_delay_us(PMU_VCORE_STABLE_TIME_US * 4);
+#else
         hal_sys_timer_delay_us(PMU_LDO_PU_STABLE_TIME_US);
+#endif
     }
 
     // Enable vana dcdc & disable vcore dcdc

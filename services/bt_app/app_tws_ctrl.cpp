@@ -106,7 +106,7 @@ int tws_ctrl_mailbox_free(TWS_MSG_BLOCK* msg_p)
 
     status = osMailFree(tws.tws_mailbox, msg_p);
     if (osOK == status)
-	tws_mail_count--;
+    tws_mail_count--;
     return (int)status;
 }
 
@@ -265,7 +265,7 @@ void tws_set_saved_codectype(uint8_t codec_type, uint8_t sample_bit, uint32_t sa
 
 uint32_t slave_media_trigger_time=0;
 uint32_t master_media_trigger_time=0;
-#define MEDIA_TRIGGER_DELAY 0x500
+#define MEDIA_TRIGGER_DELAY 0x600
 
 uint32_t tws_get_media_trigger_time()
 {
@@ -491,25 +491,24 @@ void tws_ctrl_thread(const void *arg)
                         app_tws_notify_key(msg_p->arg);
                 }
                 break;
-			case TWS_CTRL_LBRT_PING_REQ:
-				if(TWS_MASTER_CONN_SLAVE == app_tws_get_conn_state())
-				{
+            case TWS_CTRL_LBRT_PING_REQ:
+                if(TWS_MASTER_CONN_SLAVE == app_tws_get_conn_state()){
 #ifdef LBRT
-						app_tws_req_lbrt_ping(msg_p->arg);
+                     app_tws_req_lbrt_ping(msg_p->arg);
 #endif
-				}
-				break;
+                }
+                break;
 #ifdef ANC_APP
              case TWS_CTRL_ANC_SET_STATUS:
-				app_tws_player_set_anc_status(msg_p->arg);
+                app_tws_player_set_anc_status(msg_p->arg);
                 break;
 /*
              case TWS_CTRL_ANC_NOTIFY_STATUS:
-				app_tws_player_notify_anc_status(msg_p->arg);
-				break;
+                app_tws_player_notify_anc_status(msg_p->arg);
+                break;
 
              case TWS_CTRL_ANC_GET_STATUS:
-				app_tws_player_get_anc_status(msg_p->arg);
+                app_tws_player_get_anc_status(msg_p->arg);
                 break;
 */
 #endif
@@ -519,10 +518,10 @@ void tws_ctrl_thread(const void *arg)
                     app_tws_send_ring_sync(msg_p->arg);
                 }
 #endif
-				break;
+                break;
 #ifdef __TWS_ROLE_SWITCH__
              case TWS_CTRL_SEND_PROFILE_DATA:
-				tws_role_switch_exchange_profile_data(msg_p->arg);
+                tws_role_switch_exchange_profile_data(msg_p->arg);
                 //app_bt_SPP_Write_Cmd(TWS_SPP_SEND_PROFILE_DATA, msg_p->arg, spp_data_test, 500);
                 break;
 #endif

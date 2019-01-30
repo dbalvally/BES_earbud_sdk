@@ -41,6 +41,8 @@ int Besbt_hook_handler_set(enum BESBT_HOOK_USER_T user, BESBT_HOOK_HANDLER handl
 unsigned char *randaddrgen_get_bt_addr(void);
 unsigned char *randaddrgen_get_ble_addr(void);
 const char *randaddrgen_get_btd_localname(void);
+void gen_bt_addr_for_debug(void);
+
 #ifdef __cplusplus
 }
 #endif

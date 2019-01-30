@@ -817,7 +817,7 @@ void bt_drv_reg_set_rssi_seed(uint32_t seed)
     }
 }
 
-uint8_t  bt_drv_rssi_correction(uint8_t rssi)
+int8_t  bt_drv_rssi_correction(int8_t rssi)
 {
     return rssi;
 }

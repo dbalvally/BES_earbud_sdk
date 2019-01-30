@@ -9,7 +9,9 @@ obj-y := $(obj_c:.c=.o) $(obj_s:.S=.o) $(obj_cpp:.cpp=.o)
 
 ccflags-y := \
 	-Iservices/multimedia/audio/process/filters/include \
-	-Iservices/multimedia/audio/process/drc/include
+	-Iservices/multimedia/audio/process/drc/include \
+	-Iservices/nv_section/aud_section \
+	-Iservices/nv_section/include
 
 ifeq ($(HW_FIR_EQ_PROCESS),1)
 ccflags-y += -D__HW_FIR_EQ_PROCESS__

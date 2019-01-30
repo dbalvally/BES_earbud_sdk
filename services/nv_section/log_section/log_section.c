@@ -103,7 +103,7 @@ static void dump_data_into_debug_log_section(uint8_t* ptrSource, uint32_t length
     
     uint32_t lock;
 
-    lock = int_lock();
+    lock = int_lock_global();
     pmu_flash_write_config();
 
     uint32_t preBytes = (FLASH_SECTOR_SIZE_IN_BYTES - (offsetInFlashToProgram%FLASH_SECTOR_SIZE_IN_BYTES))%FLASH_SECTOR_SIZE_IN_BYTES;
@@ -158,7 +158,7 @@ static void dump_data_into_debug_log_section(uint8_t* ptrSource, uint32_t length
     }        
 
     pmu_flash_read_config();
-    int_unlock(lock);
+    int_unlock_global(lock);
 }
 
 void flush_pending_event_log(void)
@@ -451,7 +451,7 @@ void log_section_init(void)
 
 void flush_user_statistics_data(void)
 {
-    uint32_t lock = int_lock();
+    uint32_t lock = int_lock_global();
 
     pmu_flash_write_config();
     if ((offsetInUserStatisticsSectionToWrite == 0) ||
@@ -472,7 +472,7 @@ void flush_user_statistics_data(void)
         (uint32_t)((uint32_t)__user_statistics_start + offsetInUserStatisticsSectionToWrite));
     offsetInUserStatisticsSectionToWrite += sizeof(LOG_NV_INFO_T);  
 
-    int_unlock(lock);
+    int_unlock_global(lock);
 }
 
 void log_update_time_stamp(void)
@@ -598,7 +598,7 @@ void flush_dump_log_handler(void)
 
 void clear_dump_log(void)
 {
-    uint32_t lock = int_lock();
+    uint32_t lock = int_lock_global();
     pmu_flash_write_config();
 
     hal_norflash_erase(HAL_NORFLASH_ID_0, (uint32_t)(__user_statistics_start), 
@@ -608,6 +608,6 @@ void clear_dump_log(void)
     offsetInUserStatisticsSectionToWrite = 0;
     memset((uint8_t *)&log_nv_info, 0, sizeof(log_nv_info));
     log_nv_info.dump_log_magic_code = DUMP_LOG_MAGIC_CODE;
-    int_unlock(lock);
+    int_unlock_global(lock);
 }
 

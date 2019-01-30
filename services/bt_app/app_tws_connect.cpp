@@ -796,8 +796,15 @@ void a2dp_source_of_tws_opened_ind_handler(a2dp_stream_t *Stream, const a2dp_cal
 
 #if defined (LBRT) && defined(__LBRT_PAIR__)
     //notify slave to open LBRT mode
-    app_tws_req_set_lbrt(1,1,bt_syn_get_curr_ticks(app_tws_get_tws_conhdl()));
+    app_tws_toggle_lbrt_mode(LBRT_ENABLE);
 #endif
+    if (!is_simulating_reconnecting_in_progress())
+    {
+        TRACE("sync tws volume2");
+        //tws_player_sync_vol();
+        app_tws_set_slave_volume(a2dp_volume_get_tws());
+    }
+
 }
 
 void a2dp_source_of_tws_closed_ind_common_handler(a2dp_stream_t *stream, const a2dp_callback_parms_t *info)
@@ -806,7 +813,7 @@ void a2dp_source_of_tws_closed_ind_common_handler(a2dp_stream_t *stream, const a
     tws_dev_t *twsd = &tws;
 
     twsd->stream_idle = 0;
-    twsd->media_suspend = true;
+    //twsd->media_suspend = true;
     APP_TWS_SET_CURRENT_OP(APP_TWS_IDLE_OP);
     APP_TWS_SET_NEXT_OP(APP_TWS_IDLE_OP);  
 
@@ -1630,6 +1637,7 @@ void app_bt_call_back(const btif_event_t* event)
             TWSCON_DBLOG("inqmode = %x",btif_me_get_callback_event_inq_result_inq_mode(event));
             DUMP8("%02x ", btif_me_get_callback_event_inq_result_ext_inq_resp(event), 20);
             ///check the uap and nap if equal ,get the name for tws slave
+            //TRACE("##RSSI:%d",(int8_t)btif_me_get_callback_event_rssi(event));
 
             if((btif_me_get_callback_event_inq_result_bd_addr(event)->address[5]== bt_addr[5]) && (btif_me_get_callback_event_inq_result_bd_addr(event)->address[4]== bt_addr[4]) &&
                     (btif_me_get_callback_event_inq_result_bd_addr(event)->address[3]== bt_addr[3]))
@@ -1833,6 +1841,7 @@ void find_tws_peer_device_start(void)
     again:  
         TWSCON_DBLOG("\n%s %d\n",__FUNCTION__,__LINE__);
         stat = btif_me_inquiry(BTIF_BT_IAC_GIAC, 2, 0);
+        //stat = btif_me_inquiry(BTIF_BT_IAC_LIAC, 2, 0);
         TWSCON_DBLOG("\n%s %d\n",__FUNCTION__,__LINE__);
         if (stat != BT_STS_PENDING){
             osDelay(500);

@@ -13,49 +13,79 @@
  * trademark and other intellectual property rights.
  *
  ****************************************************************************/
-/**
- * Default parameter
- * Note: These parameters can not be used as customization
- *       Set customized parameters in tgt_hardware.c
- */
 #include "plat_types.h"
+#include "bt_sco_chain_cfg.h"
 
-#if defined(SPEECH_TX_NS) || defined(SPEECH_RX_NS)
-#include "speech_ns.h"
-#endif
-
-#if defined(SPEECH_TX_NS2) || defined(SPEECH_RX_NS2)
-#include "lc_mmse_ns.h"
-#endif
-
-#if defined(SPEECH_TX_NS2FLOAT) || defined(SPEECH_RX_NS2FLOAT)
-#include "lc_mmse_ns_float.h"
-#endif
-
-#if defined(SPEECH_TX_NS3) || defined(SPEECH_RX_NS3)
-#include "ns3.h"
-#endif
-
-#if defined(SPEECH_TX_AGC) || defined(SPEECH_RX_AGC)
-#include "agc.h"
-#endif
-
-#if defined(SPEECH_TX_EQ) || defined(SPEECH_RX_EQ)
-#include "speech_eq.h"
-#endif
-
-#if defined(SPEECH_TX_POST_GAIN) || defined(SPEECH_RX_POST_GAIN)
-#include "speech_gain.h"
-#endif
-
-/*--------------------TX configure--------------------*/
-#if defined(SPEECH_TX_DC_FILTER)
-#include "speech_dc_filter.h"
-const SpeechDcFilterConfig WEAK speech_tx_dc_filter_cfg = 
+#if defined(SPEECH_TX_MIC_CALIBRATION)
+/****************************************************************************************************
+ * Describtion:
+ *     Mic Calibration Equalizer, implementation with 2 order iir filters
+ * Parameters:
+ *     bypass(0/1): bypass enable or disable.
+ *     mic_num(1~4): the number of microphones. The filter num is (mic_num - 1)
+ *     calib: {bypass, gain, num, {type, frequency, gain, q}}. Please refer to SPEECH_TX_EQ section
+ *         in this file
+ * Resource consumption:
+ *     RAM:     None
+ *     FLASE:   None
+ *     MIPS:    fs = 16kHz, 0.5M/section;
+ * Note:
+ *     None
+****************************************************************************************************/
+const SpeechIirCalibConfig WEAK speech_tx_mic_calib_cfg =
 {
-    .bypass                 = 0,        // bypass enable or disable. (0/1)
+    .bypass = 0,
+    .mic_num = 2,
+    .calib = {
+        {
+            .bypass = 0,
+            .gain = 0.f,
+            .num = 0,
+            .params = {
+                {IIR_BIQUARD_LOWSHELF, 150, -2.5, 0.707},
+            }
+        },
+    },
 };
 #endif
+
+#if defined(SPEECH_TX_MIC_FIR_CALIBRATION)
+/****************************************************************************************************
+ * Describtion:
+ *     Mic Calibration Equalizer, implementation with fir filter
+ * Parameters:
+ *     bypass(0/1): bypass enable or disable.
+ *     mic_num(1~4): the number of microphones. The filter num is (mic_num - 1)
+ *     calib: {filter, filter_length, nfft}. 
+ * Resource consumption:
+ *     RAM:     None
+ *     FLASE:   None
+ *     MIPS:    fs = 16kHz, 0.5M/section;
+ * Note:
+ *     None
+****************************************************************************************************/
+float mic2_ft_caliration[256] = {1.f, };
+const SpeechFirCalibConfig WEAK speech_tx_mic_fir_calib_cfg =
+{
+    .bypass = 0,
+    .mic_num = 2,
+    .calib = {
+        {
+            .filter = mic2_ft_caliration,
+            .filter_length = ARRAY_SIZE(mic2_ft_caliration),
+        },
+    },
+};
+#endif
+
+const SpeechConfig WEAK speech_cfg_default = {
+
+#if defined(SPEECH_TX_DC_FILTER)
+    .tx_dc_filter = {
+        .bypass                 = 0,
+    },
+#endif
+
 
 #if defined(SPEECH_TX_AEC)
 /****************************************************************************************************
@@ -76,14 +106,12 @@ const SpeechDcFilterConfig WEAK speech_tx_dc_filter_cfg =
  * Note:
  *     If possible, use SPEECH_TX_AEC2FLOAT
 ****************************************************************************************************/
-#include "speech_aec.h"
-const SpeechAecConfig WEAK speech_tx_aec_cfg = 
-{
-    .bypass                 = 0,
-    .delay                  = 60,
-    .leak_estimate          = 16383,
-    .leak_estimate_shift    = 4,
-};
+    .tx_aec = {
+        .bypass                 = 0,
+        .delay                  = 60,
+        .leak_estimate          = 16383,
+        .leak_estimate_shift    = 4,
+    },
 #endif
 
 #if defined(SPEECH_TX_AEC2)
@@ -102,22 +130,20 @@ const SpeechAecConfig WEAK speech_tx_aec_cfg =
  * Note:
  *     If possible, use SPEECH_TX_AEC2FLOAT
 ****************************************************************************************************/
-#include "speech_aec2.h"
-const SpeechAec2Config WEAK speech_tx_aec2_cfg = 
-{
-    .bypass                 = 0,
-    .enEAecEnable           = 1,
-    .enHpfEnable            = 1,
-    .enAfEnable             = 0,
-    .enNsEnable             = 0,
-    .enNlpEnable            = 1,
-    .enCngEnable            = 0,
-    .shwDelayLength         = 0,
-    .shwNlpBandSortIdx      = 0.75f,
-    .shwNlpBandSortIdxLow   = 0.5f,
-    .shwNlpTargetSupp       = 3.0f,
-    .shwNlpMinOvrd          = 1.0f,
-};
+    .tx_aec2 = {
+        .bypass                 = 0,
+        .enEAecEnable           = 1,
+        .enHpfEnable            = 1,
+        .enAfEnable             = 0,
+        .enNsEnable             = 0,
+        .enNlpEnable            = 1,
+        .enCngEnable            = 0,
+        .shwDelayLength         = 0,
+        .shwNlpBandSortIdx      = 0.75f,
+        .shwNlpBandSortIdxLow   = 0.5f,
+        .shwNlpTargetSupp       = 3.0f,
+        .shwNlpMinOvrd          = 1.0f,
+    },
 #endif
 
 #if defined(SPEECH_TX_AEC2FLOAT)
@@ -145,22 +171,21 @@ const SpeechAec2Config WEAK speech_tx_aec2_cfg =
  * Note:
  *     This is the recommended AEC
 ****************************************************************************************************/
-#include "echo_canceller.h"
-const Ec2FloatConfig WEAK speech_tx_aec2float_cfg = {
-    .bypass         = 0,
-    .hpf_enabled    = true,
-    .af_enabled     = false,
-    .nlp_enabled    = true,
-    .ns_enabled     = false,
-    .cng_enabled    = false,
-    .blocks         = 1,
-    .delay          = 0,
-    .min_ovrd       = 2,
-    .target_supp    = -40,
-    .noise_supp     = -15,
-    .cng_type       = 1,
-    .cng_level      = -60,
-};
+    .tx_aec2float = {
+        .bypass         = 0,
+        .hpf_enabled    = true,
+        .af_enabled     = false,
+        .nlp_enabled    = true,
+        .ns_enabled     = false,
+        .cng_enabled    = false,
+        .blocks         = 1,
+        .delay          = 0,
+        .min_ovrd       = 2,
+        .target_supp    = -40,
+        .noise_supp     = -15,
+        .cng_type       = 1,
+        .cng_level      = -60,
+    },
 #endif
 
 #if defined(SPEECH_TX_2MIC_NS)
@@ -176,20 +201,18 @@ const Ec2FloatConfig WEAK speech_tx_aec2float_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-#include "dual_mic_denoise.h"
-const DUAL_MIC_DENOISE_CFG_T WEAK speech_tx_2mic_ns_cfg =
-{
-    .bypass             = 0,
-    .alpha_h            = 0.8,
-    .alpha_slow         = 0.9,
-    .alpha_fast         = 0.6,
-    .thegma             = 0.01,
-    .thre_corr          = 0.2,
-    .thre_filter_diff   = 0.2,
-    .cal_left_gain      = 1.0,
-    .cal_right_gain     = 1.0,
-    .delay_mono_sample  = 6,
-};
+    .tx_2mic_ns2 = {
+        .bypass             = 0,
+        .alpha_h            = 0.8,
+        .alpha_slow         = 0.9,
+        .alpha_fast         = 0.6,
+        .thegma             = 0.01,
+        .thre_corr          = 0.2,
+        .thre_filter_diff   = 0.2,
+        .cal_left_gain      = 1.0,
+        .cal_right_gain     = 1.0,
+        .delay_mono_sample  = 6,
+    },
 #endif
 
 #if defined(SPEECH_TX_2MIC_NS2)
@@ -214,16 +237,16 @@ const DUAL_MIC_DENOISE_CFG_T WEAK speech_tx_2mic_ns_cfg =
  * Note:
  *     None
 ****************************************************************************************************/
-#include "coherent_denoise.h"
-const CoherentDenoiseConfig WEAK speech_tx_2mic_ns2_cfg =
-{
-    .bypass             = 0,
-    .left_gain          = 1.0f,
-    .right_gain         = 1.0f,
-    .delay_taps         = 1,  
-    .freq_smooth_enable = 1,
-    .wnr_enable         = 0, 
-};
+    .tx_2mic_ns2 = {
+        .bypass             = 0,
+        .left_gain          = 1.0f,
+        .right_gain         = 1.0f,
+        .delay_taps         = 1,  
+        .msbc_taps			= 0.6f,
+        .cvsd_taps			= 0.5f,
+        .freq_smooth_enable = 1,
+        .wnr_enable         = 0, 
+    },
 #endif
 
 #if defined(SPEECH_TX_2MIC_NS4)
@@ -239,21 +262,18 @@ const CoherentDenoiseConfig WEAK speech_tx_2mic_ns2_cfg =
  * Note:
  *     None
 ****************************************************************************************************/
-#include "sensormic_denoise.h"
-const SensorMicDenoiseConfig WEAK speech_tx_2mic_ns4_cfg =
-{
-    .bypass             = 0,
-    .left_gain          = 1.0f,
-    .right_gain         = 1.0f,
-    .delay_tapsM        = 1,
-    .delay_tapsS        = 1,
-    .delay_tapsC        = 32,
-     //////////////////////////{{a0,a1,a2,a3,a4},{b0,b1,b2,b3,b4}}///////////////////////////
-    .coefH[0]           = {1.0,-2.9085,3.2629,-1.6697,0.3295},
-    .coefH[1]           = {0.5732,-2.2927,3.4390,-2.2927,0.5732},
-    .coefL[0]           = {1.0,-2.9085,3.2629,-1.6697,0.3295},
-    .coefL[1]           = {0.0009,0.0036,0.0054,0.0036,0.0009},
-};
+    .tx_2mic_ns4 = {
+        .bypass             = 0,
+        .left_gain          = 1.0f,
+        .right_gain         = 1.0f,
+        .delay_tapsM        = 1,
+        .delay_tapsS        = 1,
+        .delay_tapsC        = 32,
+        .coefH[0]           = {1.0,-2.9085,3.2629,-1.6697,0.3295},
+        .coefH[1]           = {0.5732,-2.2927,3.4390,-2.2927,0.5732},
+        .coefL[0]           = {1.0,-2.9085,3.2629,-1.6697,0.3295},
+        .coefL[1]           = {0.0009,0.0036,0.0054,0.0036,0.0009},
+    },
 #endif
 
 #if defined(SPEECH_TX_3MIC_NS)
@@ -276,17 +296,15 @@ const SensorMicDenoiseConfig WEAK speech_tx_2mic_ns4_cfg =
  * Note:
  *     None
 ****************************************************************************************************/
-#include "speech_3mic_ns.h"
-const Speech3MicNsConfig WEAK speech_tx_3mic_ns_cfg =
-{
-    .bypass             = 0,
-    .left_gain          = 1.0f,
-    .right_gain         = 1.0f,
-    .delay_tapsM        = 1,
-    .delay_tapsS        = 4,
-    .freq_smooth_enable = 1,
-    .wnr_enable         = 0,
-};
+    .tx_3mic_ns = {
+        .bypass             = 0,
+        .left_gain          = 1.0f,
+        .right_gain         = 1.0f,
+        .delay_tapsM        = 1,
+        .delay_tapsS        = 4,
+        .freq_smooth_enable = 1,
+        .wnr_enable         = 0,
+    },
 #endif
 
 #if defined(SPEECH_TX_NS)
@@ -302,10 +320,10 @@ const Speech3MicNsConfig WEAK speech_tx_3mic_ns_cfg =
  * Note:
  *     If possible, use SPEECH_TX_NS2 or SPEECH_TX_NS2FLOAT
 ****************************************************************************************************/
-const SpeechNsConfig WEAK speech_tx_ns_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -12,
-};
+    .tx_ns = {
+        .bypass     = 0,
+        .denoise_dB = -12,
+    },
 #endif
 
 #if defined(SPEECH_TX_NS2)
@@ -325,10 +343,10 @@ const SpeechNsConfig WEAK speech_tx_ns_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechNs2Config WEAK speech_tx_ns2_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -15,
-};
+    .tx_ns2 = {
+        .bypass     = 0,
+        .denoise_dB = -15,
+    },
 #endif
 
 #if defined(SPEECH_TX_NS2FLOAT)
@@ -347,10 +365,10 @@ const SpeechNs2Config WEAK speech_tx_ns2_cfg = {
  *     This is a 'float' version for SPEECH_TX_NS2. 
  *     It needs more MIPS and RAM, but can redece quantization noise.
 ****************************************************************************************************/
-const SpeechNs2FloatConfig WEAK speech_tx_ns2float_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -15,
-};
+    .tx_ns2float = {
+        .bypass     = 0,
+        .denoise_dB = -15,
+    },
 #endif
 
 #if defined(SPEECH_TX_NS3)
@@ -367,10 +385,10 @@ const SpeechNs2FloatConfig WEAK speech_tx_ns2float_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const Ns3Config WEAK speech_tx_ns3_cfg = {
-    .bypass = 0,
-    .mode   = NS3_SUPPRESSION_HIGH,
-};
+    .tx_ns3 = {
+        .bypass = 0,
+        .mode   = NS3_SUPPRESSION_HIGH,
+    },
 #endif
 
 #if defined(SPEECH_TX_NOISE_GATE)
@@ -390,14 +408,13 @@ const Ns3Config WEAK speech_tx_ns3_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-#include "speech_noise_gate.h"
-const NoisegateConfig WEAK speech_tx_noise_gate_cfg = {
-    .bypass         = 0,
-    .data_threshold = 640,
-    .data_shift     = 1,
-    .factor_up      = 0.001f,
-    .factor_down    = 0.5f,
-};
+    .tx_noise_gate = {
+        .bypass         = 0,
+        .data_threshold = 640,
+        .data_shift     = 1,
+        .factor_up      = 0.001f,
+        .factor_down    = 0.5f,
+    },
 #endif
 
 #if defined(SPEECH_TX_COMPEXP)
@@ -414,18 +431,17 @@ const NoisegateConfig WEAK speech_tx_noise_gate_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-#include "compexp.h"
-const CompexpConfig WEAK speech_tx_compexp_cfg = {
-    .bypass             = 0,
-    .comp_threshold     = -10.f,
-    .comp_slope         = 0.5f,
-    .expand_threshold   = -21.f,
-    .expand_slope       = -0.5f,
-    .attack_time        = 0.01f,
-    .release_time       = 0.1f,
-    .makeup_gain        = 6,
-    .delay              = 128,
-};
+    .tx_compexp = {
+        .bypass             = 0,
+        .comp_threshold     = -10.f,
+        .comp_slope         = 0.5f,
+        .expand_threshold   = -40.f,
+        .expand_slope       = -0.5f,
+        .attack_time        = 0.01f,
+        .release_time       = 0.6f,
+        .makeup_gain        = 6,
+        .delay              = 128,
+    },
 #endif
 
 #if defined(SPEECH_TX_AGC)
@@ -444,12 +460,12 @@ const CompexpConfig WEAK speech_tx_compexp_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const AgcConfig WEAK speech_tx_agc_cfg = {
-    .bypass             = 0,
-    .target_level       = 3,
-    .compression_gain   = 6,
-    .limiter_enable     = 1,
-};
+    .tx_agc = {
+        .bypass             = 0,
+        .target_level       = 3,
+        .compression_gain   = 6,
+        .limiter_enable     = 1,
+    },
 #endif
 
 #if defined(SPEECH_TX_EQ)
@@ -468,14 +484,14 @@ const AgcConfig WEAK speech_tx_agc_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const EqConfig WEAK speech_tx_eq_cfg = {
-    .bypass     = 0,
-    .gain       = 0.f,
-    .num        = 1,
-    .params = {
-        {IIR_BIQUARD_HPF, 60, 0, 0.707f},
+    .tx_eq = {
+        .bypass     = 0,
+        .gain       = 0.f,
+        .num        = 1,
+        .params = {
+            {IIR_BIQUARD_HPF, {{60, 0, 0.707f}}},
+        },
     },
-};
 #endif
 
 #if defined(SPEECH_TX_POST_GAIN)
@@ -491,13 +507,11 @@ const EqConfig WEAK speech_tx_eq_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechGainConfig WEAK speech_tx_post_gain_cfg = {
-    .bypass     = 0,
-    .gain_dB    = 6.0f,
-};
+    .tx_post_gain = {
+        .bypass     = 0,
+        .gain_dB    = 6.0f,
+    },
 #endif
-
-/*--------------------RX configure--------------------*/
 
 #if defined(SPEECH_RX_NS)
 /****************************************************************************************************
@@ -508,10 +522,10 @@ const SpeechGainConfig WEAK speech_tx_post_gain_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechNsConfig WEAK speech_rx_ns_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -12,
-};
+    .rx_ns = {
+        .bypass     = 0,
+        .denoise_dB = -12,
+    },
 #endif
 
 #if defined(SPEECH_RX_NS2)
@@ -523,10 +537,10 @@ const SpeechNsConfig WEAK speech_rx_ns_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechNs2Config WEAK speech_rx_ns2_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -15,
-};
+    .rx_ns2 = {
+        .bypass     = 0,
+        .denoise_dB = -15,
+    },
 #endif
 
 #if defined(SPEECH_RX_NS2FLOAT)
@@ -538,10 +552,10 @@ const SpeechNs2Config WEAK speech_rx_ns2_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechNs2FloatConfig WEAK speech_rx_ns2float_cfg = {
-    .bypass     = 0,
-    .denoise_dB = -15,
-};
+    .rx_ns2float = {
+        .bypass     = 0,
+        .denoise_dB = -15,
+    },
 #endif
 
 #if defined(SPEECH_RX_NS3)
@@ -553,10 +567,50 @@ const SpeechNs2FloatConfig WEAK speech_rx_ns2float_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const Ns3Config WEAK speech_rx_ns3_cfg = {
-    .bypass = 0,
-    .mode   = NS3_SUPPRESSION_HIGH,
-};
+    .rx_ns3 = {
+        .bypass = 0,
+        .mode   = NS3_SUPPRESSION_HIGH,
+    },
+#endif
+
+#if defined(SPEECH_RX_NOISE_GATE)
+/****************************************************************************************************
+ * Describtion:
+ *     Noise Gate
+ * Parameters:
+ *     Refer to SPEECH_TX_NOISE_GATE
+ * Note:
+ *     None
+****************************************************************************************************/
+    .rx_noise_gate = {
+        .bypass         = 0,
+        .data_threshold = 640,
+        .data_shift     = 1,
+        .factor_up      = 0.001f,
+        .factor_down    = 0.5f,
+    },
+#endif
+
+#if defined(SPEECH_RX_COMPEXP)
+/****************************************************************************************************
+ * Describtion:
+ *     Compressor and expander
+ * Parameters:
+ *     Refer to SPEECH_TX_COMPEXP
+ * Note:
+ *     None
+****************************************************************************************************/
+    .rx_compexp = {
+        .bypass             = 0,
+        .comp_threshold     = -10.f,
+        .comp_slope         = 0.5f,
+        .expand_threshold   = -40.f,
+        .expand_slope       = -0.5f,
+        .attack_time        = 0.01f,
+        .release_time       = 0.6f,
+        .makeup_gain        = 6,
+        .delay              = 128,
+    },
 #endif
 
 #if defined(SPEECH_RX_AGC)
@@ -568,12 +622,12 @@ const Ns3Config WEAK speech_rx_ns3_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const AgcConfig WEAK speech_rx_agc_cfg = {
-    .bypass             = 0,
-    .target_level       = 3,
-    .compression_gain   = 6,
-    .limiter_enable     = 1,
-};
+    .rx_agc = {
+        .bypass             = 0,
+        .target_level       = 3,
+        .compression_gain   = 6,
+        .limiter_enable     = 1,
+    },
 #endif
 
 #if defined(SPEECH_RX_EQ)
@@ -585,14 +639,14 @@ const AgcConfig WEAK speech_rx_agc_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const EqConfig WEAK speech_rx_eq_cfg = {
-    .bypass = 0,
-    .gain   = 0.f,
-    .num    = 1,
-    .params = {
-        {IIR_BIQUARD_HPF, 60, 0, 0.707f},
+    .rx_eq = {
+        .bypass = 0,
+        .gain   = 0.f,
+        .num    = 1,
+        .params = {
+            {IIR_BIQUARD_HPF, {{60, 0, 0.707f}}},
+        },
     },
-};
 #endif
 
 #if defined(SPEECH_RX_POST_GAIN)
@@ -604,8 +658,10 @@ const EqConfig WEAK speech_rx_eq_cfg = {
  * Note:
  *     None
 ****************************************************************************************************/
-const SpeechGainConfig WEAK speech_rx_post_gain_cfg = {
-    .bypass     = 0,
-    .gain_dB    = 6.0f,
-};
+    .rx_post_gain = {
+        .bypass     = 0,
+        .gain_dB    = 6.0f,
+    },
 #endif
+
+};

@@ -220,6 +220,8 @@ uint32_t hal_i2c_sh_recv_config(enum HAL_I2C_ID_T id, struct HAL_I2C_SENSOR_HUB_
 uint32_t hal_i2c_sh_recv_start(enum HAL_I2C_ID_T id);
 uint32_t hal_i2c_sh_recv_stop(enum HAL_I2C_ID_T id);
 uint32_t hal_i2c_sh_get_dma_config(enum HAL_I2C_ID_T id, struct HAL_I2C_SENSOR_HUB_DMA_CONFIG_T *cfg);
+uint32_t hal_i2c_sh_get_i2c_base_addr(enum HAL_I2C_ID_T id);
+
 /* sensor hub end */
 
 uint32_t hal_i2c_close(enum HAL_I2C_ID_T id);

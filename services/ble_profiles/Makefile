@@ -16,6 +16,10 @@ ifeq ($(VOICE_DATAPATH_ENABLED),1)
 obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)/voicepath/$(VOICE_DATAPATH_TYPE)/*.c))
 endif
 
+ifeq ($(AMA_VOICE),1)
+obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)amazon/*.c))
+endif
+
 #ifeq ($(GFPS_ENABLE),1)
 obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)gfps/gfps_provider/src/*.c))
 #endif
@@ -110,5 +114,7 @@ subdir-ccflags-y += \
 	-Iservices/ble_profiles/gfps/gfps_provider/src/ \
 	-Iservices/ble_profiles/gfps/gfps_provider/api/ \
 	-Iservices/ble_profiles/gfps/gfps_crypto/ \
-	-Iservices/ble_profiles/gfps/api/
+	-Iservices/ble_profiles/gfps/api/ \
+	-Iservices/ai_voice/ama/ama_manager \
+	-Iservices/ai_voice/manager \
 

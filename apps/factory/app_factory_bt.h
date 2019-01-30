@@ -14,7 +14,7 @@
  *
  ****************************************************************************/
 #ifndef __APP_FACTORY_BT_H__
-#define __APP_FACTORY__BTH__
+#define __APP_FACTORY_BT_H__
 
 #include "app_key.h"
 

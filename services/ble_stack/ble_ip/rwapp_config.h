@@ -44,6 +44,7 @@
 #define FAST_PAIR_REV_1_0	0
 #define FAST_PAIR_REV_2_0	1
 #define BLE_APP_GFPS_VER	FAST_PAIR_REV_2_0
+
 #if _GFPS_
 #if BLE_APP_GFPS_VER==FAST_PAIR_REV_2_0
 	#define CFG_APP_GFPS
@@ -60,6 +61,17 @@
 
 #ifdef BES_OTA_ENABLED
 #define CFG_APP_OTA
+#endif
+
+#if defined  (__AMA_VOICE__)
+#ifndef CFG_APP_SEC
+#define CFG_APP_SEC
+#endif
+#ifndef CFG_SEC_CON
+#define CFG_SEC_CON
+#endif
+
+#define CFG_APP_AMA_VOICE
 #endif
 
 #if VOICE_DATAPATH&&GSOUND_ENABLED
@@ -161,6 +173,14 @@
 #else // defined(CFG_APP_GFPS)
 #define BLE_APP_GFPS          0
 #endif // defined(CFG_APP_GFPS)
+
+
+/// AMA Voice Application
+#if defined(CFG_APP_AMA_VOICE)
+#define BLE_APP_AMA_VOICE           1
+#else // defined(CFG_APP_AMA)
+#define BLE_APP_AMA_VOICE           0
+#endif // defined(CFG_APP_AMA)
 
 /// @} rwapp_config
 

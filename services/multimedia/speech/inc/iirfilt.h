@@ -68,4 +68,9 @@ void iirfilt_process2(IirBiquardState *st, int stages, float master_gain, int16_
 
 void iirfilt_process2_float(IirBiquardState *st, int stages, float master_gain, float *buf, int frame_size);
 
+/* Deal with multi-channel */
+void iirfilt_process3(IirBiquardState *st, int stages, float master_gain, int16_t *buf, int frame_size, int stride);
+
+void iirfilt_process3_float(IirBiquardState *st, int stages, float master_gain, float *buf, int frame_size, int stride);
+
 #endif

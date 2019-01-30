@@ -13,8 +13,8 @@
  * trademark and other intellectual property rights.
  *
  ****************************************************************************/
-#ifndef __APP_FACTORY_BT_H__
-#define __APP_FACTORY__BTH__
+#ifndef __APP_FACTORY_AUDIO_H_
+#define __APP_FACTORY_AUDIO_H_
 
 #include "app_utils.h"
 

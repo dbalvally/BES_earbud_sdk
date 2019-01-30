@@ -84,7 +84,7 @@ void bt_drv_reg_op_esco_acl_sniff_delay_cal(uint16_t hciHandle,bool enable);
 bool  bt_drv_reg_op_check_esco_acl_sniff_conflict(uint16_t hciHandle);
 void bt_drv_reg_op_set_tpoll(uint8_t linkid,uint16_t poll_interval);
 uint8_t  bt_drv_reg_op_get_role(uint8_t linkid);
-uint8_t  bt_drv_rssi_correction(uint8_t rssi);
+int8_t  bt_drv_rssi_correction(int8_t rssi);
 void bt_drv_reg_set_rssi_seed(uint32_t seed);
 
 #define RETX_NB_0                 0

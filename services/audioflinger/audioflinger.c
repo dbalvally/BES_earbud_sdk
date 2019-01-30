@@ -97,7 +97,7 @@
 
 #define PP_PINGPANG(v)                  (v == PP_PING ? PP_PANG : PP_PING)
 
-#ifdef __SMARTVOICE__
+#if defined(__SMARTVOICE__) || defined(_AMA_)
 #define AF_STACK_SIZE                   (32*1024)
 #elif defined(SPEECH_TX_AEC2)
 #define AF_STACK_SIZE                   (2048*3)

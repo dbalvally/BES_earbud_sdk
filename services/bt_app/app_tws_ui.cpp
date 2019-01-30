@@ -62,6 +62,10 @@
 #include "bt_drv_reg_op.h"
 
 #include "hfp_api.h"
+#ifdef BES_OTA_TWS
+#include "ota_control.h"
+#include "ota_spp.h"
+#endif
 
 extern int app_bt_stream_local_volume_get(void);
 extern int a2dp_volume_set(U8 vol);
@@ -137,9 +141,9 @@ static void app_tws_lbrt_ping_to_cb(void const *param);
 osTimerDef (TWS_LBRT_PING, app_tws_lbrt_ping_to_cb);
 static osTimerId tws_lbrt_ping_timer = NULL;
 
-static void app_tws_set_lbrt_to_cb(void const *param);
-osTimerDef (TWS_SERT_LBRT_TIMER, app_tws_set_lbrt_to_cb);
-static osTimerId tws_set_lbrt_timer = NULL;
+static void app_tws_config_lbrt_to_cb(void const *param);
+osTimerDef (TWS_CONFIG_LBRT_TIMER, app_tws_config_lbrt_to_cb);
+static osTimerId tws_config_lbrt_timer = NULL;
 
 #endif
 
@@ -189,8 +193,8 @@ static APP_TWS_UI_ENV_T app_tws_ui_env =
     0,      //isFixTxPwr
     0,      //reserve
     0,      //lbrt_tx_pwr
-    0,      //lbrt_ping_ticks
-    0,      //lbrt_switch_ticks
+    MAX_LBRT_SLOT_CLOCK,      //lbrt_ping_ticks
+    MAX_LBRT_SLOT_CLOCK,      //lbrt_switch_ticks
     NULL,   // fill app_tws_pairing_preparation_done_cb here
     NULL,   // fill app_tws_pairing_done_cb
     0,      //roleSwitchFailureReason
@@ -242,8 +246,8 @@ void app_tws_ui_init(void)
     if (tws_lbrt_ping_timer == NULL)
         tws_lbrt_ping_timer = osTimerCreate (osTimer(TWS_LBRT_PING), osTimerOnce, NULL);
 
-    if (tws_set_lbrt_timer == NULL)
-        tws_set_lbrt_timer = osTimerCreate (osTimer(TWS_SERT_LBRT_TIMER), osTimerOnce, NULL);
+    if (tws_config_lbrt_timer == NULL)
+        tws_config_lbrt_timer = osTimerCreate (osTimer(TWS_CONFIG_LBRT_TIMER), osTimerOnce, NULL);
 #endif //LBRT
     // TODO: can config app_tws_ui_env here
 }
@@ -1002,18 +1006,6 @@ void app_tws_simulate_pairing(void)
     //app_tws_start_pairing_inbox(TWS_FREEMAN_PAIRING, right_bdaddr, NULL);
     app_tws_start_pairing_inbox(TWS_FREEMAN_PAIRING, left_bdaddr, NULL);
     TRACE("Freeman Pairing is started");
-}
-#endif
-
-#ifdef LBRT
-void app_tws_lbrt_simulate_pairing(void)
-{
-    app_tws_ui_set_reboot_to_pairing(true);
-    app_tws_start_pairing_inbox(TWS_DUAL_PAIRING, right_bdaddr, left_bdaddr);
-    app_tws_config_lbrt(0x80,1);
-    app_set_lbrt_enable(true);
-
-    TRACE("LBRT Pairing is started");
 }
 #endif
 
@@ -2252,6 +2244,11 @@ void app_tws_reconnect_slave_timer_stop(void)
 void connecting_tws_master_timeout_handler(void)
 {
     TRACE("%s Slave Connecting TWS master time-out !", __FUNCTION__);
+    if((true==slaveInReconMasterFlag)||IS_CONNECTED_WITH_TWS())
+    {
+        TRACE("twsslave cannot recon mobile !");
+        return ;
+    }
     app_tws_exit_role_switching(APP_TWS_ROLESWITCH_TIMEOUT);
     TRACE("current state machine is %d", CURRENT_CONN_OP_STATE_MACHINE());
     set_conn_op_state(CONN_OP_STATE_IDLE);
@@ -2850,7 +2847,7 @@ static void app_tws_set_emsack_mode_handler(uint8_t* ptrParam, uint32_t paramLen
 
     APP_TWS_SET_EMSACK_T* pReq = (APP_TWS_SET_EMSACK_T *)ptrParam;
 
-    if(app_tws_is_master_mode())
+    if(app_tws_is_master_mode()&&(mobileBtRemDev))
     {
         bt_drv_reg_op_enable_emsack_mode(btif_me_get_remote_device_hci_handle(mobileBtRemDev),1, pReq->enable);
     }
@@ -2923,15 +2920,20 @@ void app_tws_compute_lbrt_switch_time(uint32_t ticks,uint8_t enable)
     {
         uint32_t duration_ticks = ticks - app_get_lbrt_switch_ticks();
         LBRT_PRINT("App tws switch LBRT time = %d ms,[enable =%d]",BT_CONTROLLER_TICKS_TO_MS(duration_ticks),enable);
-
-        TRACE("duration_ticks= %d,dest ticks = %d, record ticks=%d",duration_ticks,ticks, app_get_lbrt_switch_ticks());
-        app_set_lbrt_switch_ticks(0xFFFF);
+        LBRT_PRINT("duration_ticks= %d,dest ticks = %d, record ticks=%d",duration_ticks,ticks, app_get_lbrt_switch_ticks());
+        
+        app_set_lbrt_switch_ticks(MAX_LBRT_SLOT_CLOCK);
     }
 }
 
-static void app_tws_start_set_lbrt_timer(uint32_t timeoutInMs)
+static void app_tws_start_config_lbrt_timer(uint32_t timeoutInMs)
 {
-    osTimerStart(tws_set_lbrt_timer, timeoutInMs);
+    osTimerStart(tws_config_lbrt_timer, timeoutInMs);
+}
+
+static void app_tws_stop_config_lbrt_timer(void)
+{
+    osTimerStop(tws_config_lbrt_timer);
 }
 
 static void app_tws_start_lbrt_ping_timer(uint32_t timeoutInMs)
@@ -2964,7 +2966,7 @@ void app_tws_config_lbrt_tx_pwr(uint16_t connHandle,uint8_t en)
 }
 
 
-void app_tws_config_lbrt(uint16_t connHandle, uint8_t en)
+void app_tws_op_bt_lbrt(uint16_t connHandle, uint8_t en)
 {
     LBRT_PRINT("%s, hcihandle=0x%x,config[1:enable | 0:disable]=%d",__func__,connHandle,en);
 #ifdef CHIP_BEST2300
@@ -2978,11 +2980,10 @@ void app_tws_exit_lbrt_mode(void)
     LBRT_PRINT("%s,enable=%d",__func__,app_get_lbrt_enable());
     if(app_get_lbrt_enable())
     {
-        app_tws_config_lbrt(app_tws_get_tws_conhdl(), LBRT_DISABLE);
-        app_tws_stop_lbrt_ping_timer();
+        app_tws_op_bt_lbrt(app_tws_get_tws_conhdl(), LBRT_DISABLE);
         app_set_lbrt_enable(false);
-        app_set_lbrt_ping_ticks(0xFFFF);
-        app_set_lbrt_switch_ticks(0xFFFF);
+        app_set_lbrt_ping_ticks(MAX_LBRT_SLOT_CLOCK);
+        app_set_lbrt_switch_ticks(MAX_LBRT_SLOT_CLOCK);
     }
 }
 
@@ -2996,52 +2997,30 @@ static void app_tws_lbrt_ping_to_cb(void const *param)
         if(app_tws_is_master_mode())
         {
             tws_lbrt_ping_req(curr_ticks);
+#ifndef __LBRT_PAIR__
             app_tws_start_lbrt_ping_timer(APP_TWS_LBRT_TIMEOUT_IN_MS);
-        }
-        else if(app_tws_is_slave_mode())
-        {
-            uint32_t diff_ticks = curr_ticks - app_get_lbrt_ping_ticks();
-            if(diff_ticks > APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS)
-            {
-                app_tws_exit_lbrt_mode();
-                LBRT_PRINT("LBRT time out,change to 2.4G mode,last ping ticks=%d",diff_ticks);
-            }
-            else
-            {
-                app_tws_start_lbrt_ping_timer(APP_TWS_LBRT_TIMEOUT_IN_MS);
-                LBRT_PRINT("Tws slave check LBRT Well,last ping ticks=%d",diff_ticks);
-            }
+#endif
         }
     }
     else
     {
-        osTimerStop(tws_lbrt_ping_timer);
+        app_tws_stop_lbrt_ping_timer();
     }
 }
 
-static void app_tws_set_lbrt_to_cb(void const *param)
+static void app_tws_config_lbrt_to_cb(void const *param)
 {
     LBRT_PRINT("%s, set LBRT mode=%d",__func__,app_get_lbrt_enable());
-
-    if(app_get_lbrt_enable())
-    {
 #ifndef __LBRT_PAIR__
-        if(app_tws_is_slave_mode())
-        {
-            app_tws_start_lbrt_ping_timer(2*APP_TWS_LBRT_TIMEOUT_IN_MS);
-        }
-        else if(app_tws_is_master_mode())
-        {
-            app_tws_start_lbrt_ping_timer(APP_TWS_LBRT_TIMEOUT_IN_MS);
-        }
+    //if enable lbrt, start lbrt ping timer
+    if(app_get_lbrt_enable()&&app_tws_is_master_mode())
+        app_tws_start_lbrt_ping_timer(APP_TWS_LBRT_TIMEOUT_IN_MS);
+    else if(!app_get_lbrt_enable())
+         //clear the target ping ticks
+        app_set_lbrt_ping_ticks(MAX_LBRT_SLOT_CLOCK);
 #endif
-    }
-    else
-    {
-        osTimerStop(tws_lbrt_ping_timer);
-    }
-
-    app_tws_config_lbrt(app_tws_get_tws_conhdl(), app_get_lbrt_enable());
+    //config controller
+    app_tws_op_bt_lbrt(app_tws_get_tws_conhdl(), app_get_lbrt_enable());
 }
 
 //request LBRT
@@ -3051,8 +3030,6 @@ void app_tws_req_set_lbrt(uint8_t en, uint8_t initial_req, uint32_t ticks)
     pReq.lbrt_en = en;
     pReq.initial_req = initial_req;
     pReq.ticks = ticks;
-    app_set_lbrt_enable(en);
-    app_set_lbrt_switch_ticks(ticks);
     app_tws_send_cmd_without_rsp(APP_TWS_CMD_REQ_SET_LBRT,(uint8_t *)&pReq, sizeof(pReq));
 }
 
@@ -3061,39 +3038,61 @@ static void app_tws_req_set_lbrt_handler(uint8_t* ptrParam, uint32_t paramLen)
     APP_TWS_REQ_SET_LBRT_T* pReq = (APP_TWS_REQ_SET_LBRT_T *)ptrParam;
     uint32_t current_ticks = bt_syn_get_curr_ticks(app_tws_get_tws_conhdl());
 
-    if(pReq->initial_req&&(app_tws_is_slave_mode()))
+    if(pReq->initial_req)
     {
-        uint32_t diff_tick = current_ticks - pReq->ticks;
-        LBRT_PRINT("%s,recieve master tick=%d,current tick=%d, diff_ticks=%d\n",__func__,pReq->ticks,
-            bt_syn_get_curr_ticks(app_tws_get_tws_conhdl()),diff_tick);
+        if(app_tws_is_slave_mode())
+        {
+            uint32_t diff_tick = current_ticks - pReq->ticks;
+            LBRT_PRINT("%s,recieve master tick=%d,current tick=%d, diff_ticks=%d\n",__func__,pReq->ticks,current_ticks,diff_tick);
 
-        if(diff_tick < APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS)
-        {
-            app_tws_req_set_lbrt(pReq->lbrt_en,false,current_ticks +
-                                    BT_CONTROLLER_MS_TO_TICKS(APP_TWS_LBRT_SWITCH_TIME_IN_MS));
-            app_tws_start_set_lbrt_timer(APP_TWS_LBRT_SWITCH_TIME_IN_MS);
+            if(diff_tick < APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS)
+            {
+                app_tws_req_set_lbrt(pReq->lbrt_en,false,current_ticks +
+                                        BT_CONTROLLER_MS_TO_TICKS(APP_TWS_LBRT_SWITCH_TIME_IN_MS));
+                //set lbrt flag
+                app_set_lbrt_enable(pReq->lbrt_en);
+                //sanity check
+                app_tws_stop_config_lbrt_timer();
+                //At an agreed time in the future, both TWS side switch their LBRT mode/BT mode 
+                app_tws_start_config_lbrt_timer(APP_TWS_LBRT_SWITCH_TIME_IN_MS);
+            }
+            else
+            {
+                //sanity check
+                app_tws_stop_config_lbrt_timer();
+                app_tws_req_set_lbrt(false,false,current_ticks);
+                LBRT_PRINT("ERROR, TWS transfer time out!");
+            }
         }
-        else
+        else if(app_tws_is_master_mode())
         {
-            app_tws_req_set_lbrt(false,false,current_ticks);
-            LBRT_PRINT("ERROR, TWS transfer time out!");
+            //sanity check
+            app_tws_stop_config_lbrt_timer();
+            //more than once time handshakes to ensure LBRT switch mode safety
+            app_tws_toggle_lbrt_mode(pReq->lbrt_en);
         }
     }
     else if(!pReq->initial_req&&(app_tws_is_master_mode()))
     {
         int diff_tick = pReq->ticks - current_ticks;
-        LBRT_PRINT("%s,recieve slave dest tick=%d,current tick=%d, diff_ticks=%d\n",__func__,pReq->ticks,
-            bt_syn_get_curr_ticks(app_tws_get_tws_conhdl()),diff_tick);
+        LBRT_PRINT("%s,recieve slave dest tick=%d,current tick=%d, diff_ticks=%d\n",__func__,pReq->ticks,current_ticks,diff_tick);
 
         if(diff_tick > 0)
         {
             app_set_lbrt_enable(pReq->lbrt_en);
             app_tws_compute_lbrt_switch_time(pReq->ticks,pReq->lbrt_en);
-            app_tws_start_set_lbrt_timer(BT_CONTROLLER_TICKS_TO_MS(diff_tick));
+            //sanity check
+            app_tws_stop_config_lbrt_timer();
+            //At an agreed time in the future, both TWS side switch their LBRT mode/BT mode 
+            app_tws_start_config_lbrt_timer(BT_CONTROLLER_TICKS_TO_MS(diff_tick));
         }
         else
         {
+            //sanity check
+            app_tws_stop_config_lbrt_timer();
             app_set_lbrt_enable(false);
+            //clear the target ping ticks
+            app_set_lbrt_ping_ticks(MAX_LBRT_SLOT_CLOCK);
             LBRT_PRINT("ERROR, SET LBRT destination time is past!");
         }
     }
@@ -3107,7 +3106,7 @@ void app_tws_rsp_lbrt_ping(uint32_t curr_ticks)
     APP_TWS_RSP_LBRT_PING_T pRsp;
     pRsp.rsp_ticks = curr_ticks;
 
-    LBRT_PRINT("%s,slave send ticks = %d\n",__func__,pRsp.rsp_ticks);
+    LBRT_PRINT("%s,slave rsp ticks = %d\n",__func__,pRsp.rsp_ticks);
 
     app_tws_send_cmd_without_rsp(APP_TWS_CMD_RSP_LBRT_PING, (uint8_t *)&pRsp, sizeof(pRsp));
 }
@@ -3134,7 +3133,6 @@ static void app_tws_rsp_lbrt_ping_handler(uint8_t* ptrParam, uint32_t paramLen)
 }
 
 //request LBRT ping
-
 TWS_CUSTOM_COMMAND_TO_ADD(APP_TWS_CMD_RSP_LBRT_PING, app_tws_rsp_lbrt_ping_handler);
 
 bool app_tws_req_lbrt_ping(uint32_t current_ticks)
@@ -3157,19 +3155,72 @@ static void app_tws_req_lbrt_ping_handler(uint8_t* ptrParam, uint32_t paramLen)
 
     if((app_tws_is_slave_mode())&&(diff_tick < APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS))
     {
-        LBRT_PRINT("Recieve Master ping ticks=%d, current ticks=%d",pReq->req_ticks,current_ticks);
-        app_set_lbrt_ping_ticks(pReq->req_ticks);
+        LBRT_PRINT("Receive Master ping ticks=%d, current ticks=%d",pReq->req_ticks,current_ticks);
+        //Receive last ping ticks, set timeout ticks and check this tick in besthread loop 
+        app_set_lbrt_ping_ticks(pReq->req_ticks + APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS);
+        //rsp master
         app_tws_rsp_lbrt_ping(current_ticks);
     }
     else
     {
-        LBRT_PRINT("ERROR,please check your TWS mode or LBRT RF");
+        LBRT_PRINT("ERROR, please check your TWS mode or LBRT RF");
     }
-
 }
 
 TWS_CUSTOM_COMMAND_TO_ADD(APP_TWS_CMD_REQ_LBRT_PING, app_tws_req_lbrt_ping_handler);
+//app tws lbrt mode toggle
+void app_tws_toggle_lbrt_mode(uint8_t en)
+{
+    LBRT_PRINT("%s,set mode =%d,current mode=%d,tws connect state=%d",__func__,en,app_get_lbrt_enable(),IS_CONNECTED_WITH_TWS());
+    //LBRT can work when tws connected and not support TWS role switch
+    if(IS_CONNECTED_WITH_TWS() && app_tws_is_roleswitch_in_idle_state())
+    {
+        //check current lbrt mode
+        if(en == app_get_lbrt_enable())
+            return;
+        //can not read current ticks in sleep mode
+        uint32_t current_ticks = bt_syn_get_curr_ticks(app_tws_get_tws_conhdl());
+        //record current bt clock
+        app_set_lbrt_switch_ticks(current_ticks);
+        //send msg to tws peer
+        app_tws_req_set_lbrt(en, 1, current_ticks);
+    }
+}
 
+//tws lbrt main loop ping handler
+void app_tws_lbrt_ping_op_handler(void)
+{
+    //LBRT can work when tws connected and not support TWS role switch
+    if(app_get_lbrt_enable()&&app_tws_is_slave_mode()&&(app_get_lbrt_ping_ticks() != MAX_LBRT_SLOT_CLOCK)&&IS_CONNECTED_WITH_TWS())
+    {
+        uint32_t current_ticks = 0;
+        //protect read bt clk when bt fall asleep
+        if(masterBtRemDev)
+        {
+            if(btif_me_get_current_mode(masterBtRemDev) == BTIF_BLM_ACTIVE_MODE)
+            {
+                current_ticks = bt_syn_get_curr_ticks(app_tws_get_tws_conhdl());
+            }
+            else if(btif_me_get_current_mode(masterBtRemDev) == BTIF_BLM_SNIFF_MODE)
+            {
+                app_tws_toggle_lbrt_mode(false);
+            }
+        }
+        else 
+        {
+            //LBRT timeout,exit lbrt mode
+            app_tws_exit_lbrt_mode();
+        }
+        
+        if((current_ticks > app_get_lbrt_ping_ticks())&&
+            (((current_ticks - app_get_lbrt_ping_ticks())&MAX_LBRT_SLOT_CLOCK) >APP_TWS_LBRT_TIMEOUT_IN_BT_TICKS))
+        {
+            LBRT_PRINT("lbrt enable=%d,crr_ticks=%d,ping_timeout_ticks=%d",app_get_lbrt_enable(),current_ticks,app_get_lbrt_ping_ticks());
+            //LBRT timeout,exit lbrt mode
+            app_tws_exit_lbrt_mode();
+        }
+    }
+}
 #endif// LBRT
 
 #ifdef __TWS_ROLE_SWITCH__
@@ -3510,29 +3561,76 @@ void app_tws_free_src_stream(void)
 }
 #endif
 
-void app_tws_get_tws_slave_mobile_rssi(void)
+/* Should be called by master only, but the result will be reported to the host of master and slave both */
+void app_tws_get_slave_mobile_rssi(void)
 {
-    if ((app_tws_get_conn_state() != TWS_MASTER_CONN_SLAVE)||( !mobileBtRemDev))
+    if ((app_tws_get_conn_state() != TWS_MASTER_CONN_SLAVE) || ( !mobileBtRemDev))
     {
-        TRACE("no connect mobile or slave,get slave2mobile rssi disallow");
+        TRACE("not connect mobile or slave, get slave2mobile rssi disallow");
         return;
     }
     btif_me_get_tws_slave_mobile_rssi(btif_me_get_remote_device_hci_handle(slaveBtRemDev));
 }
 
-int8_t app_tws_get_master_slave_rssi(void)
+/* Should be called by master only */
+int8_t app_tws_get_master_mobile_rssi(void)
 {
-    uint8_t rssi=127;
+    int8_t rssi=127;
 
-    if ((app_tws_get_conn_state() == TWS_MASTER_CONN_SLAVE)&&app_tws_is_master_mode())
+    if (mobileBtRemDev)
     {
-         rssi = bt_drv_read_rssi_in_dbm(btif_me_get_remote_device_hci_handle(slaveBtRemDev));
-         rssi =bt_drv_rssi_correction(rssi);
+         rssi = bt_drv_read_rssi_in_dbm(btif_me_get_remote_device_hci_handle(mobileBtRemDev));
+         rssi = bt_drv_rssi_correction(rssi);
     }
     else
     {
-        TRACE("no connect slave or I am slave,get slave rssi disallow");
+        LOG_PRINT_TWS("not connect mobile, get master2mobile rssi disallow");
     }
-    
-     return (int8_t)rssi;
+
+     return rssi;
 }
+
+/* Could be called by master and slave both */
+int8_t app_tws_get_master_slave_rssi(void)
+{
+    int8_t rssi=127;
+
+    if ((app_tws_get_conn_state() == TWS_MASTER_CONN_SLAVE) && app_tws_is_master_mode())
+    {
+         rssi = bt_drv_read_rssi_in_dbm(btif_me_get_remote_device_hci_handle(slaveBtRemDev));
+         rssi = bt_drv_rssi_correction(rssi);
+    }
+    else if ((app_tws_get_conn_state() == TWS_SLAVE_CONN_MASTER) && app_tws_is_slave_mode())
+    {
+         rssi = bt_drv_read_rssi_in_dbm(btif_me_get_remote_device_hci_handle(masterBtRemDev));
+         rssi = bt_drv_rssi_correction(rssi);
+    }
+    else
+    {
+        LOG_PRINT_TWS("no connection between master and slave, get master2slave rssi disallow");
+    }
+
+    return rssi;
+}
+
+#ifdef BES_OTA_TWS
+extern OtaContext ota;
+static void app_tws_ota_data_handler(uint8_t* ptrParam, uint32_t paramLen)
+{
+	        TRACE("[%s] len=%d", __func__,paramLen);
+			for(int i = 0; i<5; i++)
+				TRACE("ptrParam[%d] = 0x%x", i, ptrParam[i]);
+	int ret = tws_ota_save_peer_version(ptrParam, paramLen);
+
+	if(!ret)
+	{
+		if(!ota.isOtaSppConnected)
+			ota_bes_handle_received_data(ptrParam, false, paramLen);
+		else
+			//ota_tws_handle_response(ptrParam, paramLen);
+			app_ota_send_data_via_spp(ptrParam, paramLen);
+	}
+		
+}
+TWS_CUSTOM_COMMAND_TO_ADD(APP_TWS_CMD_TWS_OTA_DATA, app_tws_ota_data_handler);
+#endif

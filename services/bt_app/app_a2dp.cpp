@@ -83,6 +83,8 @@ int a2dp_volume_set(U8 vol);
 #endif
 
 
+extern "C" void switch_to_high_speed_conn_interval(void);
+extern "C" void switch_to_low_speed_conn_interval(void);
 
 
 static struct BT_DEVICE_ID_DIFF stream_id_flag;
@@ -1899,9 +1901,6 @@ btif_a2dp_event_t event = btif_a2dp_get_cb_event(Info);
             break;
         case BTIF_A2DP_EVENT_STREAM_OPEN:
             A2DP_TRACE("::A2DP_EVENT_STREAM_OPEN stream=%x,stream_id:%d, sample_rate codec.elements 0x%x\n", Stream,stream_id_flag.id,Info->p.configReq->codec.elements[0]);
-        #if VOICE_DATAPATH
-            app_voice_path_bt_restore_sdp_service();
-        #endif
 #if defined(A2DP_LHDC_ON)
             if (Info->p.configReq->codec.codecType == BTIF_AVDTP_CODEC_TYPE_LHDC) {
                 TRACE("##codecType: LHDC Codec, Element length = %d, AVDTP_MAX_CODEC_ELEM_SIZE = %d\n", Info->p.configReq->codec.elemLen, BTIF_AVDTP_MAX_CODEC_ELEM_SIZE);
@@ -2036,6 +2035,7 @@ btif_a2dp_event_t event = btif_a2dp_get_cb_event(Info);
             btif_avrcp_connect(app_bt_device.avrcp_channel[stream_id_flag.id],  btif_a2dp_stream_conn_remDev_bdAddr(Stream));
 
 #endif
+            a2dp_service_connected_set(true);
             break;
         case BTIF_A2DP_EVENT_STREAM_OPEN_IND:
             TRACE("::A2DP_EVENT_STREAM_OPEN_IND %d\n", Info->event);
@@ -2115,6 +2115,11 @@ btif_a2dp_event_t event = btif_a2dp_get_cb_event(Info);
 #if defined(_AUTO_TEST_)
             AUTO_TEST_SEND("Music suspend ok.");
 #endif
+
+        #ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+            switch_to_high_speed_conn_interval();
+        #endif
+
 #ifdef __BT_ONE_BRING_TWO__
             if(btif_a2dp_get_stream_state(app_bt_device.a2dp_stream[stream_id_flag.id_other]->a2dp_stream) == BTIF_AVDTP_STRM_STATE_STREAMING){
                 app_bt_device.curr_a2dp_stream_id = stream_id_flag.id_other;
@@ -2192,6 +2197,7 @@ btif_a2dp_event_t event = btif_a2dp_get_cb_event(Info);
                 app_bt_device.a2dp_play_pause_flag = 0;
             }
 #endif
+            a2dp_service_connected_set(false);
             break;
         case BTIF_A2DP_EVENT_CODEC_INFO:
             TRACE("::A2DP_EVENT_CODEC_INFO %d\n", Info->event);
@@ -2418,6 +2424,9 @@ bool a2dp_sink_of_mobile_dev_callback(a2dp_stream_t *Stream, const a2dp_callback
                 3& btif_a2dp_get_stream_conn_remDev_hciHandle(Stream));
             app_bt_set_linkpolicy(app_bt_conn_mgr_get_mobileBtRemDev(), BTIF_BLP_DISABLE_ALL);
             a2dp_start_stream_handler(Stream);
+        #ifdef ADAPTIVE_BLE_CONN_PARAM_ENABLED
+            switch_to_low_speed_conn_interval();
+        #endif
             break;
         case BTIF_A2DP_EVENT_STREAM_IDLE:
         case BTIF_A2DP_EVENT_STREAM_SUSPENDED:
@@ -2584,7 +2593,7 @@ void a2dp_volume_local_set(int8_t vol)
 int a2dp_volume_set(U8 vol)
 {
     int dest_vol;
-
+    TRACE("#vol:%d",vol);
     dest_vol = (((int)vol&0x7f)<<4)/0x7f + 1;
 
     if (dest_vol > TGT_VOLUME_LEVEL_15)

@@ -15,20 +15,23 @@
  ****************************************************************************/
 #ifndef __section_def_h__
 #define __section_def_h__
+
 #include "stdint.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct{
+
+typedef struct {
     uint16_t magic;
     uint16_t version;
     uint32_t crc;
     uint32_t reserved0;
     uint32_t reserved1;
-}section_head_t;
-
+} section_head_t;
 
 #ifdef __cplusplus
 }
 #endif
+
 #endif

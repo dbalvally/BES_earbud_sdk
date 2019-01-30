@@ -158,6 +158,16 @@ const U8 CN_BT_TWS_RIGHTCHNL[] = {
 
 #endif  
 
+#ifdef _AMA_
+const U8 CN_BT_ALEXA_START[] = { 
+
+};
+
+const U8 CN_BT_ALEXA_STOP[] = { 
+
+};
+#endif
+
 const U8 CN_BT_GSOUND_MIC_OPEN[] = {
 
 };

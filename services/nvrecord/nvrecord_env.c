@@ -134,7 +134,7 @@ int nv_record_env_reset(void)
     nv_record_env_get(&nvrecord_env);
 
     nv_record_sector_clear();
-    nv_record_open(section_usrdata_ddbrecord);
+    nv_record_env_init();
 
     if(nvrecord_env) {
 #ifdef __TWS__      

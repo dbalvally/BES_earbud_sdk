@@ -21,9 +21,9 @@
 #include "norflash_cfg.h"
 #include "norflash_gd25lq32c.h"
 
-static void gd25lq32c_write_status_s0_s15(uint16_t status)
+static void gd25lq32c_write_status_s0_s15(uint16_t status, uint8_t len)
 {
-    norflash_write_reg(GD25LQ32C_CMD_WRITE_STATUS, (uint8_t *)&status, 2);
+    norflash_write_reg(GD25LQ32C_CMD_WRITE_STATUS, (uint8_t *)&status, len);
 }
 
 static int gd25lq32c_write_status(enum DRV_NORFLASH_W_STATUS_T type, uint32_t param)
@@ -31,35 +31,49 @@ static int gd25lq32c_write_status(enum DRV_NORFLASH_W_STATUS_T type, uint32_t pa
     uint8_t status_s0_s7;
     uint8_t status_s8_s15;
     union DRV_NORFLASH_SEC_REG_CFG_T cfg;
+    bool has_quad;
 
-    if (type == DRV_NORFLASH_W_STATUS_QE || type == DRV_NORFLASH_W_STATUS_LB) {
-        status_s0_s7 = norflash_read_status_s0_s7();
-        status_s8_s15 = norflash_read_status_s8_s15();
+    if (type == DRV_NORFLASH_W_STATUS_INIT || type == DRV_NORFLASH_W_STATUS_QE ||
+            type == DRV_NORFLASH_W_STATUS_LB) {
+        has_quad = !!(norflash_get_supported_mode() &
+            (HAL_NORFLASH_OP_MODE_QUAD_OUTPUT | HAL_NORFLASH_OP_MODE_QUAD_IO));
 
-        if (type == DRV_NORFLASH_W_STATUS_QE) {
-            if (param) {
-                status_s8_s15 |= GD25LQ32C_QE_BIT_MASK;
-            } else {
-                status_s8_s15 &= ~(GD25LQ32C_QE_BIT_MASK);
-            }
-        } else if (type == DRV_NORFLASH_W_STATUS_LB) {
-            cfg = norflash_get_security_register_config();
-            if (!cfg.s.enabled) {
-                return 2;
-            }
-            if (cfg.s.lb == SEC_REG_LB_S11_S13) {
-                if (param >= 3) {
-                    return 3;
-                }
-                status_s8_s15 |= (STATUS_S11_LB1_BIT_MASK << param);
-            } else if (cfg.s.lb == SEC_REG_LB_S10) {
-                status_s8_s15 |= STATUS_S10_LB_BIT_MASK;
-            } else {
-                return 4;
-            }
+        if (type == DRV_NORFLASH_W_STATUS_INIT) {
+            gd25lq32c_write_status_s0_s15(param, (has_quad ? 2 : 1));
+            return 0;
         }
 
-        gd25lq32c_write_status_s0_s15(status_s0_s7 | (status_s8_s15 << 8));
+        status_s0_s7 = norflash_read_status_s0_s7();
+        if (has_quad) {
+            status_s8_s15 = norflash_read_status_s8_s15();
+
+            if (type == DRV_NORFLASH_W_STATUS_QE) {
+                if (param) {
+                    status_s8_s15 |= GD25LQ32C_QE_BIT_MASK;
+                } else {
+                    status_s8_s15 &= ~(GD25LQ32C_QE_BIT_MASK);
+                }
+            } else if (type == DRV_NORFLASH_W_STATUS_LB) {
+                cfg = norflash_get_security_register_config();
+                if (!cfg.s.enabled) {
+                    return 2;
+                }
+                if (cfg.s.lb == SEC_REG_LB_S11_S13) {
+                    if (param >= 3) {
+                        return 3;
+                    }
+                    status_s8_s15 |= (STATUS_S11_LB1_BIT_MASK << param);
+                } else if (cfg.s.lb == SEC_REG_LB_S10) {
+                    status_s8_s15 |= STATUS_S10_LB_BIT_MASK;
+                } else {
+                    return 4;
+                }
+            }
+
+            gd25lq32c_write_status_s0_s15(status_s0_s7 | (status_s8_s15 << 8), 2);
+        } else {
+            gd25lq32c_write_status_s0_s15(status_s0_s7, 1);
+        }
 
         return 0;
     }
@@ -469,7 +483,13 @@ const struct NORFLASH_CFG_T xt25q08b_cfg = {
     .crm_dis_bits = 0,
     .sec_reg_cfg = {
         .s = {
-            .enabled = false,
+            .enabled = true,
+            .base = SEC_REG_BASE_0X0000,
+            .size = SEC_REG_SIZE_256,
+            .offset = SEC_REG_OFFSET_0X0100,
+            .cnt = SEC_REG_CNT_4,
+            .pp = SEC_REG_PP_256,
+            .lb = SEC_REG_LB_S10,
         },
     },
     .page_size = GD25LQ32C_PAGE_SIZE,

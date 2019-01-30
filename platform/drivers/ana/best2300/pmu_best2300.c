@@ -2153,11 +2153,11 @@ static void pmu_dcdc_dual_mode_en(void)
 
     // Enable vana dcdc
     pmu_read(PMU_REG_DCDC_ANA_EN, &val);
-    val = (val & ~REG_DCDC2_ULP_MODE_NORMAL) | REG_PU_DCDC2_DR | REG_PU_DCDC2;
+    val = (val & ~(REG_DCDC2_ULP_MODE_NORMAL|REG_DCDC2_ULP_MODE_DSLEEP)) | REG_PU_DCDC2_DR | REG_PU_DCDC2;
     pmu_write(PMU_REG_DCDC_ANA_EN, val);
     // Enable vcore dcdc
     pmu_read(PMU_REG_DCDC_DIG_EN, &val);
-    val = (val & ~REG_DCDC1_ULP_MODE_NORMAL) | REG_PU_DCDC1_DR | REG_PU_DCDC1;
+    val = (val & ~(REG_DCDC1_ULP_MODE_NORMAL|REG_DCDC1_ULP_MODE_DSLEEP)) | REG_PU_DCDC1_DR | REG_PU_DCDC1;
     pmu_write(PMU_REG_DCDC_DIG_EN, val);
 
     pmu_ana_set_volt(1, PMU_POWER_MODE_DIG_DCDC);
@@ -2312,10 +2312,24 @@ int BOOT_TEXT_FLASH_LOC pmu_open(void)
     val &= ~POWERKEY_WAKEUP_OSC_EN;
     pmu_write(PMU_REG_POWER_KEY_CFG, val);
 
+#ifdef FORCE_BIG_BANDGAP
+    // Force big bandgap
+    pmu_read(PMU_REG_INT_EN, &val);
+    val |= REG_BG_SLEEP_MSK;
+    pmu_write(PMU_REG_INT_EN, val);
+    pmu_read(PMU_REG_BIAS_CFG, &val);
+    val |= BG_CONSTANT_GM_BIAS_DR | BG_CONSTANT_GM_BIAS_REG;
+    val |= BG_CORE_EN_DR | BG_CORE_EN_REG;
+    pmu_write(PMU_REG_BIAS_CFG, val);
+    hal_sys_timer_delay_us(20);
+    val |= BG_VBG_SEL_DR | BG_VBG_SEL_REG;
+    pmu_write(PMU_REG_BIAS_CFG, val);
+#else
     // Allow low power bandgap
     pmu_read(PMU_REG_BIAS_CFG, &val);
     val &= ~BG_VBG_SEL_DR;
     pmu_write(PMU_REG_BIAS_CFG, val);
+#endif
 
     // Init DCDC settings
     if (pmu_metal_id >= HAL_CHIP_METAL_ID_1) {
@@ -2684,8 +2698,8 @@ void pmu_flash_read_config(void)
 #endif
 
     // Uncached access workarond: Always access via cache
-    hal_cache_enable(HAL_CACHE_ID_I_CACHE, HAL_CACHE_NO);
-    hal_cache_enable(HAL_CACHE_ID_I_CACHE, HAL_CACHE_YES);
+    // So flush the whole cache after programming flash
+    hal_cache_invalidate(HAL_CACHE_ID_I_CACHE, FLASH_BASE, 0x2000);
 }
 
 void BOOT_TEXT_FLASH_LOC pmu_flash_freq_config(uint32_t freq)

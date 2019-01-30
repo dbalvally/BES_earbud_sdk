@@ -161,12 +161,6 @@ typedef struct
 	uint8_t bdAddr[BD_ADDR_LEN];
 	uint8_t solvedBdAddr[BD_ADDR_LEN];
 
-	// to avoid the glitch of the a2dp streaming caused by the
-	// ble connection parameter update negotiation lauched by the peer device,
-	// right after the ble connection, use this flag to reject the connection parameter
-	// reques. And let the device trigger the connection parameter update initiatively
-	uint8_t	isToRejectConnParamUpdateReqFromPeerDev;
-
 } APP_BLE_CONN_CONTEXT_T;
 
 /// Application environment structure
@@ -334,6 +328,16 @@ void appm_check_and_resolve_ble_address(uint8_t conidx);
 void appm_disconnect_all(void);
 
 uint8_t* appm_get_current_ble_addr(void);
+
+void switch_to_high_speed_conn_interval(void);
+
+void switch_to_low_speed_conn_interval(void);
+
+void app_init_ble_update_conn_param_state_machine(void);
+
+void app_ble_stop_update_conn_param_op(void);
+
+void app_ble_update_conn_param_op_status(uint16_t updatedConnInterval);
 
 /// @} APP
 

@@ -286,18 +286,14 @@ const uint16_t rf_init_tbl_1[][3] =
     {0xd1,0x8401,0},//set ra adc gain -3db  
     {0x8e,0x0D28,0},//adc noise reduction
 #else 
-#ifdef LBRT
-    {0xd1,0x840b,0},//set gain  
-#else
     {0xd1,0x8403,0},//set gain  
-#endif
     {0x8e,0x0128,0},//adc noise reduction
 #endif   
     {0x90,0x8e1f,0},//enlarge txflt BW
     {0x91,0x05c0,0},//by walker 20180427
     {0x92,0x688c,0},//update by  walker 2018.07.30
     {0x97,0x2323,0},//update by  walker 2018.10.24
-    {0x98,0x1324,0},
+    {0x98,0x1323,0},//update by  walker 2019.01.14, modify for yield
     {0x9a,0x4470,0},//div2 rc
     {0x9b,0xfd42,0},//update by  walker 2018.10.24
     {0x9c,0x180f,0},/////////luobin

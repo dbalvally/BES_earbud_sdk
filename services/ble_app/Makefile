@@ -17,6 +17,10 @@ ifeq ($(VOICE_DATAPATH_ENABLED),1)
 obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)/app_voice/app_$(VOICE_DATAPATH_TYPE)/*.c))
 endif
 
+ifeq ($(AMA_VOICE),1)
+obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)app_amazon/*.c))
+endif
+
 ifeq ($(GFPS_ENABLE),1)
 obj_c += $(patsubst $(cur_dir)%,%,$(wildcard $(cur_dir)app_gfps/*.c))
 endif
@@ -112,7 +116,9 @@ subdir-ccflags-y += \
 	-Iservices/voicepath/$(VOICE_DATAPATH_TYPE)/ \
 	-Iservices/overlay \
 	-Iservices/ble_profiles/voicepath/$(VOICE_DATAPATH_TYPE)/ \
+	-Iservices/ble_profiles/amazon \
 	-Iservices/ble_app/app_voice/app_$(VOICE_DATAPATH_TYPE)/ \
+	-Iservices/ble_app/app_amazon \
 	-Iservices/ble_profiles/ota \
 	-Iservices/multimedia/speech/codec/codecs/adpcm \
 	-Iservices/ble_app/app_ota \
@@ -127,7 +133,10 @@ subdir-ccflags-y += \
 	-Iapps/ota \
 	-Iservices/bt_app \
 	-Iservices/voicepath/gsound/gsound_target \
-	-Iapps/battery 
+	-Iapps/battery \
+	-Iservices/nvrecord/ \
+	-Iservices/ai_voice/ama/ama_manager \
+	-Iservices/ai_voice/manager \
 	
 ifeq ($(AUDIO_RESAMPLE),1)
 CFLAGS_voice_over_ble.o += -D__AUDIO_RESAMPLE__

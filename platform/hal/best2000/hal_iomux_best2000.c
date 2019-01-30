@@ -655,8 +655,9 @@ enum HAL_IOMUX_ISPI_ACCESS_T hal_iomux_ispi_access_disable(enum HAL_IOMUX_ISPI_A
 
 void hal_iomux_ispi_access_init(void)
 {
-    // Disable bt spi access ana/pmu interface
-    hal_iomux_ispi_access_disable(HAL_IOMUX_ISPI_BT_ANA | HAL_IOMUX_ISPI_BT_PMU);
+    // Disable bt/wifi spi access ana/pmu interface
+    hal_iomux_ispi_access_disable(HAL_IOMUX_ISPI_BT_ANA | HAL_IOMUX_ISPI_BT_PMU |
+        HAL_IOMUX_ISPI_WF_PMU | HAL_IOMUX_ISPI_WF_ANA);
 }
 
 void hal_iomux_set_i2s(void)

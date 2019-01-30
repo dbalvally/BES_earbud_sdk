@@ -32,6 +32,8 @@ ccflags-y := \
 	-Iservices/multimedia/audio/process/resample/include \
 	-Iservices/multimedia/audio/process/filters/include \
 	-Iservices/multimedia/fm/inc \
+	-Iservices/nv_section/aud_section \
+	-Iservices/nv_section/include \
 	-Iservices/overlay \
 	-Iservices/nvrecord \
 	-Iapps/main \

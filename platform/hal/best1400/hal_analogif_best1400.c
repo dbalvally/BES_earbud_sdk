@@ -26,9 +26,20 @@
 #define ANA_CHIP_ID(n)                  BITFIELD_VAL(ANA_CHIP_ID, n)
 #define ANA_VAL_CHIP_ID                 0x301
 
-#define ANA_READ_CMD(r)                 ((1 << 24) | (((r) & 0xFF) << 16))
-#define ANA_WRITE_CMD(r, v)             ((((r) & 0xFF) << 16) | ((v) & 0xFFFF))
-#define ANA_READ_VAL(v)                 ((v) & 0xFFFF)
+// ISPI_ARBITRATOR_ENABLE should be defined when:
+// 1) BT and MCU will access RF register at the same time
+
+#ifdef ISPI_ARBITRATOR_ENABLE
+// Min padding OSC cycles needed: BT=0 MCU=6
+// When OSC=26M and SPI=6.5M, min padding SPI cycles is BT=0 MCU=2
+#define PADDING_CYCLES                  2
+#else
+#define PADDING_CYCLES                  0
+#endif
+
+#define ANA_READ_CMD(r)                 (((1 << 24) | (((r) & 0xFF) << 16)) << PADDING_CYCLES)
+#define ANA_WRITE_CMD(r, v)             (((((r) & 0xFF) << 16) | ((v) & 0xFFFF)) << PADDING_CYCLES)
+#define ANA_READ_VAL(v)                 (((v) >> PADDING_CYCLES) & 0xFFFF)
 
 #define ANA_PAGE_NUM                    2
 #define ANA_PAGE_0                      (0xA000)
@@ -49,8 +60,8 @@ static const struct HAL_SPI_CFG_T spi_cfg = {
     .rx_sep_line = true,
     .cs = 0,
     .rate = 6500000,
-    .tx_bits = 25,
-    .rx_bits = 25,
+    .tx_bits = 25 + PADDING_CYCLES,
+    .rx_bits = 25 + PADDING_CYCLES,
     .rx_frame_bits = 0,
 };
 

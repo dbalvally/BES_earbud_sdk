@@ -23,6 +23,9 @@
 #define APP_KEY_GET_EVENT(appevt, evt) (evt = appevt&0xff)
 
 #define APP_KEY_CODE_GOOGLE                 APP_KEY_CODE_FN15
+#ifdef _AMA_
+#define APP_KEY_CODE_VOICEPATH APP_KEY_CODE_FN15
+#endif
 
 enum APP_KEY_CODE_T {
     APP_KEY_CODE_NONE = HAL_KEY_CODE_NONE,
